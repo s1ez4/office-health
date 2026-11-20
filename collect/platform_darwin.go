@@ -43,6 +43,9 @@ func volumeLabel(mount string) (string, bool) {
 	return "", false
 }
 
+// attachVolumes — на Mac букв дисков нет; сопоставление дисков и томов APFS пока не делаем.
+func attachVolumes(disks []Disk) {}
+
 // fallbackDisks — smartctl нет (обычная ситуация на Mac): берём хотя бы общий вердикт SMART у diskutil.
 func fallbackDisks() ([]Disk, error) {
 	out, err := exec.Command("diskutil", "list", "physical").Output()

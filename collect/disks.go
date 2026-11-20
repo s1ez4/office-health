@@ -33,6 +33,7 @@ func (diskCollector) Collect(s *Snapshot) error {
 		if len(list) > 0 {
 			s.Disks.Source = "diskutil"
 			s.Disks.List = list
+			attachVolumes(s.Disks.List)
 		}
 		return err
 	}
@@ -47,6 +48,7 @@ func (diskCollector) Collect(s *Snapshot) error {
 	for _, d := range devices {
 		s.Disks.List = append(s.Disks.List, readDisk(path, d))
 	}
+	attachVolumes(s.Disks.List) // какие буквы (C:, D:) на каком диске — своё у каждой ОС
 	return nil
 }
 

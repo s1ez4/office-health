@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>office-health: {{.Hostname}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0B0B0C;--ink2:#2E3035;--ink3:#3C3F44;--ground:#D4D5D7;--red:#E0402A;--red-ink:#C2331F;--line:rgba(11,11,12,.18)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:'Inter Tight',Inter,system-ui,-apple-system,'Segoe UI',sans-serif}
+.mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;font-size:11px}
+.glass{background:rgba(255,255,255,.34);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(11,11,12,.12)}
+
+/* фон */
+.bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.blob{position:absolute;border-radius:50%;will-change:transform}
+.b1{width:780px;height:780px;left:-260px;top:-240px;background:radial-gradient(circle,#0B0B0C 0%,rgba(11,11,12,.55) 30%,rgba(11,11,12,0) 68%);filter:blur(70px);opacity:.55;animation:drift1 52s ease-in-out infinite alternate}
+.b2{width:640px;height:640px;right:-220px;top:38%;background:radial-gradient(circle,#2A2C30 0%,rgba(42,44,48,0) 66%);filter:blur(80px);opacity:.45;animation:drift2 66s ease-in-out infinite alternate}
+.b3{width:700px;height:700px;left:30%;top:10%;background:radial-gradient(circle,#FFF 0%,rgba(255,255,255,0) 64%);filter:blur(60px);opacity:.7;animation:drift3 58s ease-in-out infinite alternate}
+.ring{position:absolute;right:-180px;top:-180px;width:620px;height:620px;border:1px solid rgba(11,11,12,.16);border-radius:50%;animation:spin 120s linear infinite}
+.ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;margin-left:-3px;background:var(--red);border-radius:50%}
+.scan{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(11,11,12,0),rgba(11,11,12,.28),rgba(11,11,12,0));animation:scan 16s linear infinite}
+.grain{position:absolute;left:-50%;top:-50%;width:200%;height:200%;opacity:.16;mix-blend-mode:multiply;animation:grain 1.4s steps(6) infinite}
+@keyframes drift1{50%{transform:translate(260px,180px) scale(1.12)}100%{transform:translate(90px,460px) scale(.94)}}
+@keyframes drift2{50%{transform:translate(-300px,-140px) scale(1.18)}100%{transform:translate(-120px,240px)}}
+@keyframes drift3{50%{transform:translate(-240px,260px) scale(1.1)}100%{transform:translate(200px,120px) scale(.92)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes scan{from{top:-2%}to{top:102%}}
+@keyframes grain{20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-5%)}60%{transform:translate(-6%,-2%)}80%{transform:translate(5%,4%)}}
+@media (prefers-reduced-motion:reduce){.blob,.ring,.scan,.grain{animation:none}}
+
+/* раскладка */
+.page{position:relative;min-height:100vh;padding:28px 24px 72px;overflow:hidden}
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,3fr);gap:24px}
+.row>.mono{padding-top:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{border-radius:22px;padding:26px;display:flex;flex-direction:column;gap:22px}
+.card.is-urgent{border-color:var(--red)}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card-title{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:6px}
+.sub{color:var(--ink3)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.stat b{display:block;font-size:20px;font-weight:600}
+.stat .mono{font-size:10px;color:var(--ink3);margin-top:4px;display:block}
+.kv{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.kv div{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:10px 0;border-bottom:1px solid rgba(11,11,12,.12)}
+.kv div:last-child{border-bottom:0;padding-bottom:0}
+.kv b.bad{color:var(--red-ink)}
+.huge{font-size:96px;font-weight:600;letter-spacing:-.06em;line-height:.85}
+@media (max-width:760px){.row{grid-template-columns:1fr}}
+
+/* статусы */
+.pill{flex:none;display:inline-block;font-weight:700;border-radius:999px;padding:5px 10px}
+.pill-urgent{background:var(--red);color:#fff}
+.pill-soon{background:var(--ink);color:#fff}
+.pill-ok{border:1px solid var(--ink)}
+.t-urgent{color:var(--red-ink)}.t-soon{color:var(--ink)}.t-ok{color:#5A5D63}
+
+/* шапка */
+h1{margin:0;display:flex;flex-direction:column;line-height:.86;letter-spacing:-.06em;font-weight:600}
+h1 .prog{font-size:clamp(48px,8.5vw,132px);color:var(--ink3);font-weight:500}
+h1 .host{font-size:clamp(88px,17vw,236px)}
+.status{display:inline-flex;align-items:center;gap:14px;border-radius:999px;padding:14px 26px 14px 18px;font-size:26px;font-weight:600;letter-spacing:-.02em}
+.status-urgent{background:var(--red);color:#fff}
+.status-soon{background:var(--ink);color:#fff}
+.status-ok{border:1px solid var(--ink)}
+
+/* окно сводки */
+.summary{display:block;width:100%;text-align:left;border-radius:22px;padding:22px 24px 10px;color:var(--ink);font:inherit;cursor:pointer}
+.summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.sum-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block}
+.counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0 18px}
+.counts b{display:block;font-size:56px;font-weight:600;letter-spacing:-.05em;line-height:1}
+.counts .mono{display:block;margin-top:6px}
+.task{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid rgba(11,11,12,.12)}
+.task .mono{flex:none;width:92px;font-weight:700}
+.task span:last-child{font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* полноэкранное окно */
+dialog{border:0;padding:24px;margin:0;width:100vw;height:100vh;max-width:none;max-height:none;background:rgba(212,213,215,.55);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)}
+dialog::backdrop{background:transparent}
+.full{height:100%;border-radius:28px;background:rgba(255,255,255,.5);display:flex;flex-direction:column;overflow:hidden}
+.full-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 16px 28px;border-bottom:1px solid rgba(11,11,12,.14)}
+.close{width:44px;height:44px;border:1px solid rgba(11,11,12,.3);border-radius:50%;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.full-body{flex:1;overflow:auto;padding:clamp(20px,4vw,56px);display:flex;flex-direction:column;gap:28px}
+.full-title{font-size:clamp(56px,9vw,140px);font-weight:600;letter-spacing:-.06em;line-height:.85}
+.full-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;border-top:1px solid rgba(11,11,12,.25);padding-top:18px}
+.full-counts b{display:block;font-size:72px;font-weight:600;letter-spacing:-.05em;line-height:1}
+.actions{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.actions li{display:grid;grid-template-columns:110px 1fr;gap:16px;align-items:start;border-radius:18px;padding:24px 28px}
+.actions .pill{justify-self:start}
+.actions .ttl{font-size:26px;font-weight:600;letter-spacing:-.01em}
+.actions .det{font-size:18px;color:var(--ink3);margin-top:6px}
+
+footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;color:var(--ink2);border-top:1px solid rgba(11,11,12,.25);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="bg" aria-hidden="true">
+<div class="blob b3"></div><div class="blob b1"></div><div class="blob b2"></div>
+<div class="ring"></div><div class="scan"></div>
+<svg class="grain" xmlns="http://www.w3.org/2000/svg"><filter id="oh-grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#oh-grain)"/></svg>
+</div>
+
+<div class="wrap">
+
+<section style="display:flex;flex-direction:column;gap:28px">
+<h1><span class="prog">office—health:</span><span class="host">{{.Hostname}}</span></h1>
+<div><span class="status status-{{.Overall.Level}}">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>
+( {{.Overall.Headline}} )</span></div>
+</section>
+
+<section class="row">
+<div class="mono">*01 — сводка</div>
+<button type="button" class="glass summary" id="open-summary" aria-haspopup="dialog" aria-label="Открыть сводку подробнее">
+<span class="sum-top"><span class="mono" style="display:flex;align-items:center;gap:10px"><span class="dot"></span>{{.Hostname}} · {{.ScanTime}}</span><span class="mono" style="display:flex;align-items:center;gap:8px">подробнее<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></span>
+<span class="counts">
+<span><b class="t-urgent">{{.Counts.Urgent}}</b><span class="mono">▲ срочно</span></span>
+<span><b class="t-soon">{{.Counts.Soon}}</b><span class="mono">◆ скоро</span></span>
+<span><b class="t-ok">{{.Counts.Ok}}</b><span class="mono">● норма</span></span>
+</span>
+<span style="display:block">
+{{range .Actions}}<span class="task"><span class="mono t-{{.Level}}">{{.Label}}</span><span>{{.Short}}</span></span>
+{{else}}<span class="task"><span class="mono t-ok">● норма</span><span>Всё в порядке</span></span>{{end}}
+</span>
+</button>
+</section>
+
+<section class="row">
+<div class="mono">*02 — диски</div>
+<div class="cards">
+{{range .Disks}}
+<article class="glass card is-{{.Level}}">
+<div class="card-head">
+<div><div class="mono sub">{{.Letter}} · {{.Kind}}</div><div class="card-title">{{.Model}}</div></div>
+<span class="mono pill pill-{{.Level}}">{{.Label}}</span>
+</div>
+{{if .IsSSD}}
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mono">износ</span><span style="font-size:56px;font-weight:600;letter-spacing:-.05em;line-height:1">{{.WearPct}}%</span></div>
+<div style="height:2px;background:var(--line);margin-top:10px"><div style="width:{{.WearPct}}%;height:2px;background:var(--ink)"></div></div>
+</div>
+<div class="stats">
+<div class="stat"><b>{{.Hours}}</b><span class="mono">часов</span></div>
+<div class="stat"><b>{{.WrittenTB}} ТБ</b><span class="mono">записано</span></div>
+<div class="stat"><b>{{.UsedPct}}%</b><span class="mono">занято</span></div>
+</div>
+{{else}}
+{{if .HasTrend}}
+<div>
+<div class="mono" style="margin-bottom:8px">битые сектора · 4 недели</div>
+<svg viewBox="0 0 300 70" width="100%" height="70" role="img" aria-label="Рост переназначенных секторов"><line x1="0" y1="69" x2="300" y2="69" stroke="rgba(11,11,12,.25)"/><polyline points="{{.TrendPoints}}" fill="none" stroke="#C2331F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+{{end}}
+<div class="kv">
+<div><span>Переназначенные сектора</span><b {{if .ReallocatedBad}}class="bad"{{end}}>{{.Reallocated}}</b></div>
+<div><span>Сектора в ожидании</span><b>{{.Pending}}</b></div>
+<div><span>Неисправимые ошибки</span><b>{{.Uncorrectable}}</b></div>
+<div><span>Часов работы</span><b>{{.Hours}}</b></div>
+</div>
+{{end}}
+</article>
+{{else}}
+<article class="glass card"><div class="sub">Диски не найдены. Проверьте, установлен ли smartctl и запущен ли агент от администратора.</div></article>
+{{end}}
+</div>
+</section>
+
+<section class="row">
+<div class="mono">*03 — питание и ошибки</div>
+<div class="cards">
+{{with .Battery}}
+<article class="glass card">
+<div class="card-head">
+<div><div class="mono sub">батарея</div><div class="card-title">Здоровье</div></div>
+<span class="mono pill pill-{{.Level}}">{{.Label}}</span>
+</div>
+<div style="display:flex;align-items:flex-end;gap:18px"><div class="huge">{{.HealthPct}}%</div><div class="mono sub" style="font-size:10px;padding-bottom:6px">от заводской<br>ёмкости</div></div>
+<div style="display:flex;gap:3px" aria-hidden="true">{{range .Segments}}<div style="flex:1;height:18px;border-radius:3px;background:{{if .}}#0B0B0C{{else}}rgba(11,11,12,.14){{end}}"></div>{{end}}</div>
+<div class="stats" style="grid-template-columns:1fr 1fr">
+<div class="stat"><b>{{.DesignMWh}}</b><span class="mono">мВт·ч заводская</span></div>
+<div class="stat"><b>{{.FullMWh}}</b><span class="mono">мВт·ч сейчас</span></div>
+</div>
+</article>
+{{end}}
+<article class="glass card">
+<div class="card-head">
+<div><div class="mono sub">журнал whea · 30 дней</div><div class="card-title">Ошибки железа</div></div>
+<span class="mono pill pill-{{.HWErrors.Level}}">{{.HWErrors.Label}}</span>
+</div>
+<div class="huge">{{.HWErrors.Count}}</div>
+{{if .HWErrors.Items}}<div class="kv">{{range .HWErrors.Items}}<div><span>{{.Text}}</span><span class="mono sub">{{.Time}}</span></div>{{end}}</div>{{end}}
+</article>
+</div>
+</section>
+
+<footer class="mono">
+<span>*данные: smartctl / wmi / журнал windows</span>
+<span>( office—health · v{{.AgentVersion}} )</span>
+<span style="text-align:right">проверка {{.ScanTime}}</span>
+</footer>
+
+</div>
+</div>
+
+<dialog id="summary" aria-label="Сводка">
+<div class="glass full">
+<div class="full-head">
+<div class="mono" style="display:flex;align-items:center;gap:10px"><span class="dot"></span>office—health: {{.Hostname}} / сводка</div>
+<button type="button" class="close" id="close-summary" aria-label="Закрыть"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0B0B0C" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+</div>
+<div class="full-body">
+<div class="full-title">Сводка <span class="t-urgent">{{.Hostname}}</span></div>
+<div class="full-counts">
+<div><b class="t-urgent">{{.Counts.Urgent}}</b><div class="mono" style="margin-top:8px">▲ срочно</div></div>
+<div><b class="t-soon">{{.Counts.Soon}}</b><div class="mono" style="margin-top:8px">◆ скоро менять</div></div>
+<div><b class="t-ok">{{.Counts.Ok}}</b><div class="mono" style="margin-top:8px">● в норме</div></div>
+<div class="mono" style="line-height:1.9;color:var(--ink2)">{{range .Specs}}*{{.}}<br>{{end}}</div>
+</div>
+<div class="mono">*что сделать</div>
+<ol class="actions">
+{{range .Actions}}<li class="glass"><span class="mono pill pill-{{.Level}}">{{.Label}}</span><div><div class="ttl">{{.Title}}</div><div class="det">{{.Detail}}</div></div></li>
+{{else}}<li class="glass"><span class="mono pill pill-ok">● норма</span><div><div class="ttl">Всё в порядке</div><div class="det">Замен не требуется.</div></div></li>{{end}}
+</ol>
+</div>
+</div>
+</dialog>
+
+<script>
+(function(){
+  var d=document.getElementById('summary');
+  document.getElementById('open-summary').addEventListener('click',function(){ if(d.showModal){d.showModal();}else{d.setAttribute('open','');} });
+  document.getElementById('close-summary').addEventListener('click',function(){ d.close ? d.close() : d.removeAttribute('open'); });
+})();
+</script>
+</body>
+</html>

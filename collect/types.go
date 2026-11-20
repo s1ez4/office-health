@@ -36,6 +36,8 @@ type Disk struct {
 	PercentUsed *int64   `json:"percent_used,omitempty"` // сколько % ресурса записи израсходовано
 	WrittenTB   *float64 `json:"written_tb,omitempty"`   // сколько всего записано за жизнь, ТБ
 
+	Volumes []string `json:"volumes,omitempty"` // буквы разделов на этом диске: «C:», «D:» (пока только Windows)
+
 	Error string `json:"error,omitempty"` // если про этот диск не удалось узнать
 }
 

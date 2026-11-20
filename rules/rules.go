@@ -62,6 +62,7 @@ func (l Level) Class() string {
 // Finding — одна находка: что не так и что делать.
 type Finding struct {
 	Level  Level
+	Short  string // что сделать, в 2–4 словах: «Заменить HDD» (для окна сводки)
 	Title  string // коротко: «Плохие сектора: 160»
 	Advice string // по-человечески: что это значит и что делать
 }
@@ -74,8 +75,8 @@ type Check struct {
 
 // add добавляет находку и поднимает уровень проверки, если находка серьёзнее.
 // (c *Check) — «указатель на получателя»: метод меняет саму проверку, а не её копию.
-func (c *Check) add(l Level, title, advice string) {
-	c.Findings = append(c.Findings, Finding{Level: l, Title: title, Advice: advice})
+func (c *Check) add(l Level, short, title, advice string) {
+	c.Findings = append(c.Findings, Finding{Level: l, Short: short, Title: title, Advice: advice})
 	c.Level = max(c.Level, l) // max — встроенная функция Go
 }
 
@@ -128,7 +129,7 @@ func Disk(d collect.Disk) Check {
 	c := Check{Level: OK}
 
 	if d.SmartPassed != nil && !*d.SmartPassed {
-		c.add(Urgent, "SMART: FAILED — диск сам сообщает о неисправности",
+		c.add(Urgent, "Заменить диск", "SMART: FAILED — диск сам сообщает о неисправности",
 			"Встроенная самодиагностика диска считает, что он скоро откажет. "+
 				"Сегодня же скопируйте важные файлы на другой диск или в облако и замените этот диск.")
 	}
@@ -144,11 +145,11 @@ func Disk(d collect.Disk) Check {
 		val(d.Reallocated), val(d.Pending), val(d.Uncorrectable))
 	switch {
 	case bad > SectorsUrgent:
-		c.add(Urgent, fmt.Sprintf("Плохих секторов: %d — диск разрушается", bad),
+		c.add(Urgent, "Заменить "+kindName(d), fmt.Sprintf("Плохих секторов: %d — диск разрушается", bad),
 			"Поверхность диска портится, и число плохих мест растёт ("+detail+"). "+
 				"Файлы могут перестать открываться в любой момент. Срочно сделайте копию важных данных и замените диск.")
 	case bad > SectorsSoon:
-		c.add(Soon, fmt.Sprintf("Плохих секторов: %d", bad),
+		c.add(Soon, "Запланировать замену "+kindName(d), fmt.Sprintf("Плохих секторов: %d", bad),
 			"На диске появились места, которые плохо читаются ("+detail+"). "+
 				"Пока он работает, но это первый признак износа. Держите свежую копию важных файлов "+
 				"и запланируйте замену диска в ближайшие месяцы. Если число будет расти — меняйте сразу.")
@@ -158,11 +159,11 @@ func Disk(d collect.Disk) Check {
 		used := *d.PercentUsed
 		switch {
 		case used >= SSDWearUrgent:
-			c.add(Urgent, fmt.Sprintf("SSD изношен на %d%%", used),
+			c.add(Urgent, "Заменить SSD", fmt.Sprintf("SSD изношен на %d%%", used),
 				"Ресурс записи почти исчерпан. Изношенный SSD может внезапно перестать записывать или "+
 					"«замёрзнуть» только на чтение. Сделайте копию данных и замените диск как можно скорее.")
 		case used >= SSDWearSoon:
-			c.add(Soon, fmt.Sprintf("SSD изношен на %d%%", used),
+			c.add(Soon, "Заложить замену SSD", fmt.Sprintf("SSD изношен на %d%%", used),
 				"У SSD ограниченное число перезаписей, и большая часть уже израсходована. "+
 					"Работать он ещё будет, но заложите замену в бюджет на ближайшие полгода.")
 		}
@@ -174,7 +175,7 @@ func Disk(d collect.Disk) Check {
 func Volume(v collect.Volume) Check {
 	c := Check{Level: OK}
 	if v.UsedPct > VolumeFullSoon {
-		c.add(Soon, fmt.Sprintf("Раздел %s почти заполнен (свободно %.0f ГБ)", v.Mount, v.FreeGB),
+		c.add(Soon, "Освободить место "+v.Mount, fmt.Sprintf("Раздел %s почти заполнен (свободно %.0f ГБ)", v.Mount, v.FreeGB),
 			"Это не износ, но когда место кончается, Windows тормозит и не может ставить обновления. "+
 				"Почистите «Загрузки» и корзину, запустите «Очистку диска» (правой кнопкой по диску → Свойства) "+
 				"или перенесите большие файлы на другой диск.")
@@ -187,11 +188,11 @@ func Battery(b collect.Battery) Check {
 	c := Check{Level: OK}
 	switch h := b.HealthPct; {
 	case h < BatteryUrgent:
-		c.add(Urgent, fmt.Sprintf("Батарея держит %.0f%% от новой", h),
+		c.add(Urgent, "Заменить батарею", fmt.Sprintf("Батарея держит %.0f%% от новой", h),
 			"Ноутбук быстро разряжается и может выключиться без предупреждения, а старые батареи иногда вздуваются. "+
 				"Замените батарею; если корпус выгнулся или тачпад приподнялся — не заряжайте и меняйте немедленно.")
 	case h < BatterySoon:
-		c.add(Soon, fmt.Sprintf("Батарея держит %.0f%% от новой", h),
+		c.add(Soon, "Заказать батарею", fmt.Sprintf("Батарея держит %.0f%% от новой", h),
 			"Батарея постарела: от розетки ноутбук работает заметно меньше, чем новым. "+
 				"Если его носят на встречи — пора заказать новую батарею. На столе от сети это не страшно.")
 	}
@@ -206,11 +207,11 @@ func HWErrors(e collect.HWErrors) Check {
 	c := Check{Level: OK}
 	switch n := e.Count; {
 	case n >= WHEAUrgent:
-		c.add(Urgent, fmt.Sprintf("Ошибок железа за %d дней: %d", e.Days, n),
+		c.add(Urgent, "Показать мастеру", fmt.Sprintf("Ошибок железа за %d дней: %d", e.Days, n),
 			"Windows постоянно фиксирует аппаратные сбои — это часто бывает перед зависаниями и «синими экранами». "+
 				"Покажите компьютер мастеру: проверить память (MemTest), перегрев, блок питания и материнскую плату.")
 	case n >= WHEASoon:
-		c.add(Soon, fmt.Sprintf("Ошибок железа за %d дней: %d", e.Days, n),
+		c.add(Soon, "Проверить память и пыль", fmt.Sprintf("Ошибок железа за %d дней: %d", e.Days, n),
 			"Windows записала аппаратные сбои, которые сама исправила. Единичные — не беда, "+
 				"но если они повторяются, стоит проверить память и не перегревается ли компьютер (почистить от пыли).")
 	}
@@ -222,16 +223,27 @@ func panics(e collect.HWErrors) Check {
 	c := Check{Level: OK}
 	switch n := e.Count; {
 	case n >= PanicUrgent:
-		c.add(Urgent, fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
+		c.add(Urgent, "Показать Mac в сервисе", fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
 			"Mac регулярно падает с kernel panic — так обычно проявляются неисправная память, диск, перегрев "+
 				"или сбойное подключённое устройство. Сделайте резервную копию (Time Machine) и покажите Mac в сервисе; "+
 				"перед этим попробуйте отключить все внешние устройства и посмотреть, повторится ли.")
 	case n >= PanicSoon:
-		c.add(Soon, fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
+		c.add(Soon, "Следить за перезагрузками", fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
 			"Mac хотя бы раз перезагрузился из-за критической ошибки. Единичный случай бывает из-за программы или "+
 				"переходника; если повторится — проверьте Mac в сервисе. Обновите macOS и держите свежую копию Time Machine.")
 	}
 	return c
+}
+
+// kindName — «HDD», «SSD» или просто «диск», для коротких подсказок.
+func kindName(d collect.Disk) string {
+	switch d.Kind {
+	case "HDD", "SSD":
+		return d.Kind
+	case "NVMe":
+		return "SSD"
+	}
+	return "диск"
 }
 
 func val(p *int64) int64 {

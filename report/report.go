@@ -19,7 +19,14 @@ import (
 // Поэтому на офисный компьютер нужно копировать только один файл — программу.
 //
 //go:embed template.html
-var templateHTML string
+var templateHTML string // прежний шаблон — им пользуется панель приложения (куски report-css и report-body)
+
+// Новый дизайн отчёта-файла. Вёрстка в нём готовая, данные приходят в виде ReportView (view.go).
+//
+//go:embed report.html
+var reportHTML string
+
+var reportTmpl = template.Must(template.New("report.html").Parse(reportHTML))
 
 // NewTemplate — шаблон отчёта со всеми вспомогательными функциями.
 // Приложение (пакет app) берёт его и добавляет свои страницы, вставляя внутрь кусок "report-body".
@@ -119,7 +126,7 @@ func Write(dir string, s collect.Snapshot, r rules.Result) (string, error) {
 		return "", err
 	}
 	defer f.Close() // defer — «закрой файл, когда функция закончится», что бы ни случилось
-	if err := NewTemplate().ExecuteTemplate(f, "report", NewPage(s, r)); err != nil {
+	if err := reportTmpl.Execute(f, BuildView(s, r)); err != nil {
 		return "", err
 	}
 

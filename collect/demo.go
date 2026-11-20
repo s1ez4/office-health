@@ -36,12 +36,13 @@ func Demo() Snapshot {
 				{
 					Device: "/dev/nvme0", Model: "Samsung SSD 980 500GB", Serial: "S64DNX0R123456",
 					Kind: "NVMe", CapacityGB: 465.8, SmartPassed: ptr(true), PowerOnHours: ptr(int64(6120)),
-					PercentUsed: ptr(int64(12)), WrittenTB: ptr(18.4),
+					PercentUsed: ptr(int64(12)), WrittenTB: ptr(18.4), Volumes: []string{"C:"},
 				},
 				{
 					Device: "/dev/sda", Model: "WDC WD10EZEX-08WN4A0", Serial: "WD-WCC6Y0ABCDEF",
 					Kind: "HDD", CapacityGB: 931.5, SmartPassed: ptr(true), PowerOnHours: ptr(int64(41230)),
 					Reallocated: ptr(int64(128)), Pending: ptr(int64(24)), Uncorrectable: ptr(int64(8)),
+					Volumes: []string{"D:"},
 				},
 			},
 		},

@@ -25,3 +25,5 @@ func osName(platform, version string) string { return platform + " " + version }
 func volumeLabel(mount string) (string, bool) { return mount, true }
 
 func fallbackDisks() ([]Disk, error) { return nil, nil }
+
+func attachVolumes(disks []Disk) {}
