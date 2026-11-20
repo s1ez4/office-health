@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Здоровье ПК — {{.S.System.Hostname}}</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #fff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --ok: #16a34a; --ok-bg: #dcfce7; --soon: #b45309; --soon-bg: #fef3c7;
+    --urgent: #dc2626; --urgent-bg: #fee2e2; --unknown: #6b7280; --unknown-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0; }
+  h2 { font-size: 18px; margin: 28px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+  .muted { color: var(--muted); }
+  .demo { background: #ede9fe; color: #5b21b6; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-weight: 600; }
+  .warn { background: var(--soon-bg); color: #78350f; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+
+  .head { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin-top: 12px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; }
+
+  .big { text-align: center; border-radius: 12px; padding: 14px 22px; min-width: 190px; }
+  .big .lbl { font-size: 13px; opacity: .8; }
+  .big .val { font-size: 26px; font-weight: 700; }
+
+  .badge { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .ok { background: var(--ok-bg); color: var(--ok); }
+  .soon { background: var(--soon-bg); color: var(--soon); }
+  .urgent { background: var(--urgent-bg); color: var(--urgent); }
+  .unknown { background: var(--unknown-bg); color: var(--unknown); }
+  .card.ok, .card.soon, .card.urgent, .card.unknown { background: var(--card); border-left: 6px solid; }
+  .card.ok { border-left-color: var(--ok); } .card.soon { border-left-color: var(--soon); }
+  .card.urgent { border-left-color: var(--urgent); } .card.unknown { border-left-color: var(--line); }
+
+  .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .title { font-weight: 600; font-size: 16px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  td { padding: 4px 0; border-top: 1px solid var(--line); }
+  td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .finding { margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
+  .finding b { display: block; }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .bar span { display: block; height: 100%; background: var(--ok); }
+  .bar.soon span { background: var(--soon); } .bar.urgent span { background: var(--urgent); }
+  code { background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+  ul.events { margin: 10px 0 0; padding-left: 18px; }
+  footer { margin-top: 32px; font-size: 13px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<main>
+{{if .S.Demo}}<div class="demo">Демо-режим: данные выдуманные, это пример отчёта.</div>{{end}}
+{{if not .S.IsAdmin}}<div class="warn"><b>Запущено не от администратора.</b> Здоровье дисков и журнал ошибок без прав администратора недоступны — запустите программу правой кнопкой → «Запуск от имени администратора».</div>{{end}}
+
+<!-- Карточка компьютера и общий статус -->
+<div class="card">
+  <div class="head">
+    <div>
+      <h1>{{.S.System.Hostname}}</h1>
+      <div class="muted">Проверка от {{.Generated}}</div>
+      <dl class="facts">
+        <dt>Система</dt><dd>{{.S.System.OS}}</dd>
+        <dt>Процессор</dt><dd>{{.S.System.CPU}} · {{.S.System.CPUCores}} потоков</dd>
+        <dt>Память</dt><dd>{{f1 .S.System.RAMTotalGB}} ГБ, занято {{f0 .S.System.RAMUsedPct}}%</dd>
+        <dt>Без перезагрузки</dt><dd>{{uptime .S.System.UptimeHours}}</dd>
+      </dl>
+    </div>
+    <div class="big {{.R.Overall.Class}}">
+      <div class="lbl">Общий статус</div>
+      <div class="val">{{.R.Overall.Text}}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Диски -->
+<h2>Диски</h2>
+{{if not .S.Disks.SmartctlFound}}
+<div class="card unknown">
+  <div class="title">Не найдена программа smartctl — здоровье дисков не проверено</div>
+  <p>smartctl (пакет smartmontools) читает у дисков их «медкарту» — SMART. Поставить можно одним из способов:</p>
+  <ul>
+    <li>в командной строке от администратора: <code>winget install smartmontools.smartmontools</code></li>
+    <li>или скачать установщик с <code>smartmontools.org</code> (раздел Download → Windows)</li>
+    <li>или просто положить <code>smartctl.exe</code> в одну папку с этой программой</li>
+  </ul>
+  <p class="muted">После установки запустите проверку ещё раз.</p>
+</div>
+{{else if not .Disks}}
+<div class="card unknown"><div class="title">smartctl не нашёл ни одного диска</div></div>
+{{end}}
+{{range .Disks}}
+<div class="card {{.C.Level.Class}}">
+  <div class="row">
+    <div class="title">{{.D.Model}} <span class="muted">· {{.D.Kind}} · {{f0 .D.CapacityGB}} ГБ</span></div>
+    <span class="badge {{.C.Level.Class}}">{{.C.Level.Text}}</span>
+  </div>
+  {{if .D.Error}}<p class="muted">Не удалось прочитать: {{.D.Error}}</p>{{else}}
+  <table>
+    <tr><td>Общий вердикт SMART</td><td>{{smart .D.SmartPassed}}</td></tr>
+    <tr><td>Наработка</td><td>{{hours .D.PowerOnHours}}</td></tr>
+    {{if .D.PercentUsed}}<tr><td>Износ (израсходовано ресурса)</td><td>{{n .D.PercentUsed}}%</td></tr>{{end}}
+    {{if .D.WrittenTB}}<tr><td>Записано за всю жизнь</td><td>{{f1p .D.WrittenTB}} ТБ</td></tr>{{end}}
+    {{if .D.Reallocated}}<tr><td>Переназначенные сектора (5)</td><td>{{n .D.Reallocated}}</td></tr>{{end}}
+    {{if .D.Pending}}<tr><td>Сектора под подозрением (197)</td><td>{{n .D.Pending}}</td></tr>{{end}}
+    {{if .D.Uncorrectable}}<tr><td>Нечитаемые сектора (198)</td><td>{{n .D.Uncorrectable}}</td></tr>{{end}}
+  </table>{{end}}
+  {{range .C.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
+  <div class="muted" style="font-size:13px;margin-top:8px">{{.D.Device}}{{if .D.Serial}} · s/n {{.D.Serial}}{{end}}</div>
+</div>
+{{end}}
+
+<!-- Заполненность разделов -->
+<h2>Место на дисках</h2>
+{{range .Volumes}}
+<div class="card {{.C.Level.Class}}">
+  <div class="row">
+    <div class="title">{{.V.Mount}} <span class="muted">· {{.V.FS}}</span></div>
+    <span class="muted">свободно {{f0 .V.FreeGB}} из {{f0 .V.TotalGB}} ГБ · занято {{f0 .V.UsedPct}}%</span>
+  </div>
+  <div class="bar {{.C.Level.Class}}"><span style="width: {{f0 .V.UsedPct}}%"></span></div>
+  {{range .C.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
+</div>
+{{end}}
+
+<!-- Батарея -->
+{{with .S.Battery}}{{if .Present}}
+<h2>Батарея</h2>
+<div class="card {{$.R.Battery.Level.Class}}">
+  <div class="row">
+    <div class="title">Здоровье батареи: {{f0 .HealthPct}}%</div>
+    <span class="badge {{$.R.Battery.Level.Class}}">{{$.R.Battery.Level.Text}}</span>
+  </div>
+  <div class="muted">Новая вмещала {{.DesignedMWh}} мВт·ч, сейчас — {{.FullChargeMWh}} мВт·ч</div>
+  {{range $.R.Battery.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
+</div>
+{{end}}{{end}}
+
+<!-- Ошибки железа -->
+{{with .S.HWErrors}}
+<h2>Ошибки железа (WHEA)</h2>
+<div class="card {{$.R.HWErrors.Level.Class}}">
+  <div class="row">
+    <div class="title">За {{.Days}} дней: {{.Count}}</div>
+    <span class="badge {{$.R.HWErrors.Level.Class}}">{{$.R.HWErrors.Level.Text}}</span>
+  </div>
+  {{if .Recent}}<ul class="events">{{range .Recent}}<li><span class="muted">{{date .Time}} · событие {{.ID}}</span> — {{.Message}}</li>{{end}}</ul>
+  {{else}}<div class="muted">Windows не записывала аппаратных ошибок — это хорошо.</div>{{end}}
+  {{range $.R.HWErrors.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
+</div>
+{{end}}
+
+{{if .S.Warnings}}
+<h2>Что не удалось проверить</h2>
+<div class="card"><ul>{{range .S.Warnings}}<li>{{.}}</li>{{end}}</ul></div>
+{{end}}
+
+<footer>office-health · отчёт сформирован автоматически</footer>
+</main>
+</body>
+</html>

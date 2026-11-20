@@ -22,6 +22,9 @@ type Snapshot struct {
 	Demo        bool      `json:"demo"`     // true — данные выдуманные (флаг --demo)
 	IsAdmin     bool      `json:"is_admin"` // запущено ли от администратора
 	System      System    `json:"system"`
+	Disks       Disks     `json:"disks"`
+	Battery     *Battery  `json:"battery"`   // nil — не проверяли (например, не Windows)
+	HWErrors    *HWErrors `json:"hw_errors"` // nil — не проверяли
 	Warnings    []string  `json:"warnings,omitempty"` // что не удалось собрать и почему
 }
 
@@ -34,6 +37,7 @@ type Collector interface {
 
 // All — список всех сборщиков для текущей ОС: общие + специфичные для платформы.
 func All() []Collector {
+	// «...» разворачивает список: добавить все элементы, а не список целиком
 	return append([]Collector{systemCollector{}}, platformCollectors()...)
 }
 
