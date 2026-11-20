@@ -169,7 +169,9 @@ func (s *Store) AddSnapshot(id string, snap collect.Snapshot) error {
 	if err != nil {
 		return err
 	}
-	name := time.Now().UTC().Format("20060102T150405.000") + ".json"
+	// Имя = время получения (по нему же сортируем историю) + случайный хвост. Без хвоста две проверки,
+	// пришедшие в одно мгновение, получили бы одно имя, и вторая затёрла бы первую.
+	name := time.Now().UTC().Format("20060102T150405.000000000") + "-" + randomHex(3) + ".json"
 	if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil {
 		return err
 	}
