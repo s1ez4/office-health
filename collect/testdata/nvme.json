@@ -1,0 +1,19 @@
+{
+  "smartctl": {"version": [7, 5], "exit_status": 0},
+  "device": {"name": "/dev/sda", "info_name": "/dev/sda", "type": "nvme", "protocol": "NVMe"},
+  "model_name": "SAMSUNG MZVLB1T0HBLR-000L2",
+  "serial_number": "S4DZNX0N123456",
+  "nvme_total_capacity": 1024209543168,
+  "smart_status": {"passed": true, "nvme": {"value": 0}},
+  "nvme_smart_health_information_log": {
+    "critical_warning": 0,
+    "temperature": 38,
+    "available_spare": 100,
+    "percentage_used": 7,
+    "data_units_read": 51234567,
+    "data_units_written": 39062500,
+    "power_on_hours": 5321,
+    "media_errors": 0
+  },
+  "power_on_time": {"hours": 5321}
+}

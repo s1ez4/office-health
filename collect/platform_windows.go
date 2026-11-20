@@ -7,10 +7,15 @@ package collect
 
 import "golang.org/x/sys/windows"
 
-// platformCollectors — сборщики, которые есть только на Windows.
-// Пока пусто; диски, батарея и ошибки железа появятся на следующих шагах.
+// platformCollectors — сборщики для Windows.
 func platformCollectors() []Collector {
-	return nil
+	return []Collector{diskCollector{}}
+}
+
+// smartctlKnownPaths — куда обычно ставится smartmontools на Windows.
+var smartctlKnownPaths = []string{
+	`C:\Program Files\smartmontools\bin\smartctl.exe`,
+	`C:\Program Files (x86)\smartmontools\bin\smartctl.exe`,
 }
 
 // IsAdmin — запущена ли программа «от имени администратора».

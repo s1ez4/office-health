@@ -1,0 +1,10 @@
+{
+  "smartctl": {
+    "version": [7, 5],
+    "argv": ["smartctl", "-a", "-j", "/dev/nvme0"],
+    "messages": [
+      {"string": "Smartctl open device: /dev/nvme0 failed: \\\\.\\Scsi0:: access denied", "severity": "error"}
+    ],
+    "exit_status": 2
+  }
+}

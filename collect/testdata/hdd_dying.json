@@ -1,0 +1,19 @@
+{
+  "smartctl": {"version": [7, 5], "exit_status": 8},
+  "device": {"name": "/dev/sdb", "type": "ata", "protocol": "ATA"},
+  "model_name": "WDC WD10EZEX-08WN4A0",
+  "serial_number": "WD-WCC6Y0ABCDEF",
+  "user_capacity": {"blocks": 1953525168, "bytes": 1000204886016},
+  "logical_block_size": 512,
+  "rotation_rate": 7200,
+  "smart_status": {"passed": false},
+  "ata_smart_attributes": {
+    "table": [
+      {"id": 5, "name": "Reallocated_Sector_Ct", "value": 140, "raw": {"value": 128, "string": "128"}},
+      {"id": 9, "name": "Power_On_Hours", "value": 44, "raw": {"value": 41230, "string": "41230"}},
+      {"id": 197, "name": "Current_Pending_Sector", "value": 200, "raw": {"value": 24, "string": "24"}},
+      {"id": 198, "name": "Offline_Uncorrectable", "value": 200, "raw": {"value": 8, "string": "8"}}
+    ]
+  },
+  "power_on_time": {"hours": 41230}
+}

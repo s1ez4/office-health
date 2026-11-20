@@ -4,3 +4,4 @@ reports/
 *.html
 *.json
 !report/*.html
+!collect/testdata/*.json
