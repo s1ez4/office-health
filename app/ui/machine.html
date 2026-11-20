@@ -1,0 +1,82 @@
+{{define "title"}}{{.Card.M.Name}}{{end}}
+
+{{define "content"}}
+{{if .Checking}}{{if .Card.M.Self}}<meta http-equiv="refresh" content="3">{{end}}{{end}}
+<style>
+  .crumbs { font-size: 14px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .rename { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hist-wrap { overflow-x: auto; }
+  .hist { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .hist th, .hist td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--ui-line); white-space: nowrap; }
+  .hist th { color: var(--ui-sub); font-weight: 600; font-size: 13px; }
+  .hist td.num { font-variant-numeric: tabular-nums; }
+  .grow { color: var(--ui-urgent); font-weight: 600; margin-left: 4px; }
+  details summary { cursor: pointer; color: var(--ui-sub); }
+</style>
+
+<div class="crumbs"><a href="/">← Все компьютеры</a></div>
+
+<div class="hrow">
+  <div class="stack" style="gap:2px;min-width:0">
+    <h1>{{.Card.M.Name}}</h1>
+    <div class="sub">{{if .Card.M.Self}}Этот компьютер{{else}}Добавлен {{ago .Card.M.AddedAt}} · данные приходили {{ago .Card.M.LastSeen}}{{end}}</div>
+  </div>
+  <div class="actions">
+    {{if .Card.M.Self}}
+      {{if .Checking}}<span class="sub" style="display:flex;gap:6px;align-items:center"><span class="spin"></span>Проверяю…</span>
+      {{else}}<form class="inline" method="post" action="/check"><input type="hidden" name="back" value="/m/{{.Card.M.ID}}"><button class="btn primary" type="submit">Проверить сейчас</button></form>{{end}}
+    {{end}}
+  </div>
+</div>
+
+{{if .Card.Silent}}<div class="notice warn">Этот компьютер не присылал данные {{days .Card.Silent}} дн. Ниже — последняя полученная проверка.</div>{{end}}
+
+{{if .History}}
+<section class="panel stack">
+  <h2>История проверок</h2>
+  <div class="hist-wrap">
+  <table class="hist">
+    <thead><tr><th>Когда</th><th>Статус</th><th>Плохие сектора</th><th>Износ SSD</th><th>Батарея</th><th>Ошибки железа</th></tr></thead>
+    <tbody>
+    {{range .History}}
+      <tr>
+        <td>{{ago .Time}}</td>
+        <td><span class="pill st-{{.Level.Class}}">{{.Level.Text}}</span></td>
+        <td class="num">{{.Sectors}}{{with plus .Delta}}<span class="grow" title="больше, чем в прошлую проверку">{{.}}</span>{{end}}</td>
+        <td class="num">{{.Wear}}</td>
+        <td class="num">{{.Battery}}</td>
+        <td class="num">{{.Errors}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+  <div class="sub" style="font-size:13.5px">Красное «+N» у секторов — их стало больше с прошлой проверки. Растущее число — главный признак, что диск умирает, даже если пока статус «скоро менять».</div>
+</section>
+{{end}}
+
+{{if .Card.Has}}
+<div class="rep auto">{{template "report-body" .Page}}</div>
+{{else}}
+<div class="panel sub">{{if .Card.M.Self}}Проверка ещё не проводилась — нажмите «Проверить сейчас».{{else}}Компьютер подключён, ждём первую проверку.{{end}}</div>
+{{end}}
+
+<details class="panel">
+  <summary>Настройки компьютера</summary>
+  <div class="stack" style="margin-top:12px">
+    <form class="rename" method="post" action="/m/{{.Card.M.ID}}/rename">
+      <label for="name" class="sub" style="align-self:center">Название</label>
+      <input type="text" id="name" name="name" value="{{.Card.M.Name}}" maxlength="80">
+      <button class="btn small" type="submit">Сохранить</button>
+    </form>
+    {{if not .Card.M.Self}}
+    <form method="post" action="/m/{{.Card.M.ID}}/remove" class="stack" style="gap:6px">
+      <div class="sub" style="font-size:14px">Убрать компьютер из списка: удалится его история, а его ключ перестанет действовать — новые данные от него приниматься не будут.</div>
+      <div><label style="font-size:14px"><input type="checkbox" required> Да, убрать «{{.Card.M.Name}}»</label>
+      <button class="btn small danger" type="submit">Убрать</button></div>
+    </form>
+    {{end}}
+  </div>
+</details>
+{{end}}

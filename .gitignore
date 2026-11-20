@@ -1,8 +1,21 @@
-# собранные программы и отчёты — в git не храним
+# Сборки программы
 *.exe
-reports/
-*.html
-*.json
-!report/*.html
-!collect/testdata/*.json
+/office-health
 dist/
+
+# Отчёты и снимки — это данные реальных компьютеров, в репозиторий им нельзя
+reports/
+office-health_*.html
+office-health_*.json
+
+# Данные приложения и агента, если их запустили из папки проекта
+state.json
+state.json.tmp
+agent.json
+history/
+
+# Мусор систем и редакторов
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,93 @@
+{{define "layout"}}<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{template "title" .}} · Office Health</title>
+<style>
+  /* Макет: шапка с навигацией, под ней одна колонка до 960px. Шрифты системные — приложение работает без интернета. */
+  :root {
+    --ui-bg: #eef1f5; --ui-surface: #ffffff; --ui-ink: #18202b; --ui-sub: #5b6676; --ui-line: #d9dee6;
+    --ui-accent: #1f6f5c; --ui-accent-ink: #ffffff; --ui-accent-soft: #dcefe9;
+    --ui-ok: #16803c; --ui-ok-bg: #dcf5e4; --ui-soon: #9a5a06; --ui-soon-bg: #fdf0d2;
+    --ui-urgent: #c22a2a; --ui-urgent-bg: #fde3e3; --ui-unknown: #5b6676; --ui-unknown-bg: #e8ecf1;
+    --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+    --ui-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ui-bg: #11161d; --ui-surface: #19212b; --ui-ink: #e6ebf1; --ui-sub: #9ba6b5; --ui-line: #2a3441;
+      --ui-accent: #4cc3a2; --ui-accent-ink: #0d1a16; --ui-accent-soft: #163a31;
+      --ui-ok: #4ade80; --ui-ok-bg: #133222; --ui-soon: #fbbf24; --ui-soon-bg: #3a2c0d;
+      --ui-urgent: #f87171; --ui-urgent-bg: #3d1717; --ui-unknown: #9ba6b5; --ui-unknown-bg: #232c38;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--ui-bg); color: var(--ui-ink); font: 15px/1.5 var(--ui-font); }
+  a { color: var(--ui-accent); }
+  :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+  .topbar { background: var(--ui-surface); border-bottom: 1px solid var(--ui-line); }
+  .topbar-in { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 8px 20px; align-items: center; flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 17px; color: var(--ui-ink); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .brand svg { flex: none; }
+  .nav { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .nav a { color: var(--ui-sub); text-decoration: none; padding: 6px 10px; border-radius: 8px; }
+  .nav a[aria-current] { color: var(--ui-ink); background: var(--ui-bg); font-weight: 600; }
+  .nav a:hover { color: var(--ui-ink); }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; display: flex; flex-direction: column; gap: 20px; }
+  .page h1 { font-size: 26px; margin: 0; line-height: 1.25; text-wrap: balance; }
+  .page h2 { font-size: 18px; margin: 0; }
+  .sub { color: var(--ui-sub); }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .hrow { display: flex; gap: 10px 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
+  .btn { font: inherit; font-weight: 600; border: 1px solid var(--ui-line); background: var(--ui-surface); color: var(--ui-ink);
+         padding: 8px 14px; border-radius: 9px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { border-color: var(--ui-sub); }
+  .btn.primary { background: var(--ui-accent); border-color: var(--ui-accent); color: var(--ui-accent-ink); }
+  .btn.small { padding: 4px 10px; font-size: 13px; }
+  .btn.danger { color: var(--ui-urgent); }
+  .btn[disabled] { opacity: .6; cursor: default; }
+  form.inline { display: inline; margin: 0; }
+
+  .pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .st-ok { background: var(--ui-ok-bg); color: var(--ui-ok); }
+  .st-soon { background: var(--ui-soon-bg); color: var(--ui-soon); }
+  .st-urgent { background: var(--ui-urgent-bg); color: var(--ui-urgent); }
+  .st-unknown { background: var(--ui-unknown-bg); color: var(--ui-unknown); }
+
+  .panel { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 14px; padding: 18px 20px; }
+  .notice { border-radius: 10px; padding: 10px 14px; background: var(--ui-accent-soft); }
+  .notice.bad { background: var(--ui-urgent-bg); }
+  .notice.warn { background: var(--ui-soon-bg); }
+  code, .code { font-family: var(--ui-mono); font-size: 13.5px; background: var(--ui-bg); border-radius: 6px; padding: 1px 6px; }
+  .codebox { font-family: var(--ui-mono); font-size: 13px; background: var(--ui-bg); border: 1px solid var(--ui-line); border-radius: 10px;
+             padding: 10px 12px; overflow-wrap: anywhere; user-select: all; }
+  input[type=text] { font: inherit; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--ui-line); background: var(--ui-surface); color: var(--ui-ink); min-width: 0; }
+  .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  {{template "report-css"}}
+  .rep h2 { margin: 24px 0 10px; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <a class="brand" href="/">
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11h3l1.5-3 3 6 1.5-3H19" fill="none" stroke="var(--ui-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Office Health
+  </a>
+  <nav class="nav">{{template "nav" .}}</nav>
+  <form class="inline" method="post" action="/quit"><button class="btn small" type="submit" title="Остановить приложение">Выключить</button></form>
+</div></header>
+<main class="page">
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}
+
+{{define "nav"}}<a href="/">Компьютеры</a><a href="/add">Добавить компьютер</a>{{end}}

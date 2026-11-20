@@ -1,0 +1,87 @@
+{{define "title"}}Добавить компьютер{{end}}
+{{define "nav"}}<a href="/">Компьютеры</a><a href="/add" aria-current="page">Добавить компьютер</a>{{end}}
+
+{{define "content"}}
+<style>
+  .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .copyrow { display: flex; gap: 8px; align-items: flex-start; }
+  .copyrow .codebox { flex: 1; min-width: 0; }
+  .inv { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--ui-line); flex-wrap: wrap; }
+  .joinform { display: flex; gap: 8px; flex-wrap: wrap; }
+  .joinform input { flex: 1; min-width: 200px; }
+</style>
+
+<h1>Добавить компьютер</h1>
+<p class="sub" style="margin:0;max-width:65ch">Добавленный компьютер становится «агентом»: сам проверяет себя каждые 6 часов и присылает результат сюда. Сам он ничего не видит — ни своего статуса, ни других компьютеров. Смотреть можно только здесь, на этом компьютере.</p>
+
+{{with .AgentErr}}<div class="notice bad">{{.}}</div>{{end}}
+
+{{if .Code}}
+<section class="panel stack">
+  <h2>Приглашение готово</h2>
+  <ol class="steps">
+    <li>Скопируйте программу office-health на тот компьютер (тот же файл, что у вас: <b>.exe</b> для Windows, <b>Office Health.app</b> для Mac).</li>
+    <li>Запустите на нём одну команду.
+      <div class="stack" style="gap:6px;margin-top:8px">
+        <div class="sub" style="font-size:14px"><b>Windows</b> — «Командная строка» от имени администратора, из папки с программой:</div>
+        <div class="copyrow"><div class="codebox" id="win">office-health.exe join {{.Code}}</div><button class="btn small" type="button" data-copy="win">Копировать</button></div>
+        <div class="sub" style="font-size:14px"><b>Mac</b> — программа «Терминал», если Office Health лежит в «Программах»:</div>
+        <div class="copyrow"><div class="codebox" id="mac">"/Applications/Office Health.app/Contents/MacOS/office-health" join {{.Code}}</div><button class="btn small" type="button" data-copy="mac">Копировать</button></div>
+        <div class="sub" style="font-size:14px">Или проще: запустите на том компьютере Office Health, откройте «Добавить компьютер» и вставьте код в самый нижний блок:</div>
+        <div class="copyrow"><div class="codebox" id="code">{{.Code}}</div><button class="btn small" type="button" data-copy="code">Копировать код</button></div>
+      </div>
+    </li>
+    <li>Через несколько секунд компьютер появится в списке «Компьютеры».</li>
+  </ol>
+  <div class="notice warn" style="font-size:14px">
+    Код одноразовый, действует 7 дней. Оба компьютера должны быть в одной сети (один офис, один Wi-Fi), а это приложение — запущено.
+    {{if eq .Platform "windows"}}Если Windows спросит «Разрешить доступ office-health к сети?» — разрешите для частных сетей, иначе другие компьютеры не достучатся.{{end}}
+    {{if eq .Platform "darwin"}}Если Mac спросит, разрешить ли входящие подключения для office-health, — разрешите.{{end}}
+    {{if not .LAN}}<br><b>Сейчас этот компьютер не в локальной сети</b> — подключитесь к сети и создайте приглашение заново.{{end}}
+  </div>
+</section>
+{{else}}
+<section class="panel stack">
+  <h2>Новое приглашение</h2>
+  <p class="sub" style="margin:0">Создайте код и запустите его на компьютере, который хотите добавить.</p>
+  <form method="post" action="/add"><button class="btn primary" type="submit">Создать приглашение</button></form>
+</section>
+{{end}}
+
+{{if .Invites}}
+<section class="panel">
+  <h2 style="margin-bottom:6px">Ждут подключения</h2>
+  {{range .Invites}}
+  <div class="inv">
+    <span>Приглашение от {{ago .Created}} · действует до {{.Expires.Format "02.01 15:04"}}</span>
+    <form class="inline" method="post" action="/invites/{{.ID}}/cancel"><button class="btn small" type="submit">Отозвать</button></form>
+  </div>
+  {{end}}
+</section>
+{{end}}
+
+<section class="panel stack">
+  <h2>Этот компьютер — агент другого?</h2>
+  <p class="sub" style="margin:0">Если вам прислали код приглашения, вставьте его — этот компьютер начнёт отправлять свои проверки тому, кто пригласил.</p>
+  {{with .JoinMsg}}<div class="notice">{{.}}</div>{{end}}
+  {{with .JoinErr}}<div class="notice bad">{{.}}</div>{{end}}
+  <form class="joinform" method="post" action="/join">
+    <input type="text" id="joincode" name="code" placeholder="OH1-…" required autocomplete="off" aria-label="Код приглашения">
+    <button class="btn" type="submit">Подключиться</button>
+  </form>
+</section>
+
+<script>
+  // Кнопки «Копировать»: копируем текст из блока рядом
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = document.getElementById(btn.dataset.copy);
+      var label = btn.textContent;
+      var done = function () { btn.textContent = "Скопировано"; setTimeout(function () { btn.textContent = label; }, 1500); };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(el.textContent).then(done, function () { window.getSelection().selectAllChildren(el); });
+      } else { window.getSelection().selectAllChildren(el); }
+    });
+  });
+</script>
+{{end}}

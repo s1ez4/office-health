@@ -1,0 +1,78 @@
+{{define "title"}}Компьютеры{{end}}
+{{define "nav"}}<a href="/" aria-current="page">Компьютеры</a><a href="/add">Добавить компьютер</a>{{end}}
+
+{{define "content"}}
+{{if .Checking}}<meta http-equiv="refresh" content="3">{{end}}
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .tile { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 14px; padding: 16px 18px;
+          display: flex; flex-direction: column; gap: 10px; border-top: 5px solid var(--ui-line); min-width: 0; }
+  .tile.st-ok-b { border-top-color: var(--ui-ok); } .tile.st-soon-b { border-top-color: var(--ui-soon); }
+  .tile.st-urgent-b { border-top-color: var(--ui-urgent); }
+  .tile-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .tile-name { font-weight: 700; font-size: 17px; color: var(--ui-ink); text-decoration: none; overflow-wrap: anywhere; }
+  .tile-name:hover { text-decoration: underline; }
+  .tile-meta { color: var(--ui-sub); font-size: 13.5px; }
+  .tile ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .tile li { font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+  .dot.soon { background: var(--ui-soon); } .dot.urgent { background: var(--ui-urgent); } .dot.unknown { background: var(--ui-unknown); }
+  .tile-foot { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .summary { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tag { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ui-sub); }
+  .empty-add { border: 2px dashed var(--ui-line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column;
+               gap: 8px; justify-content: center; color: var(--ui-sub); text-decoration: none; min-height: 160px; }
+  .empty-add:hover { border-color: var(--ui-accent); color: var(--ui-ink); }
+  .empty-add b { color: var(--ui-ink); }
+</style>
+
+{{if .Demo}}<div class="notice">Демо-режим: компьютеры выдуманные, чтобы посмотреть, как всё выглядит.</div>{{end}}
+
+<div class="hrow">
+  <div class="stack" style="gap:4px">
+    <h1>Компьютеры</h1>
+    <div class="summary">
+      {{with count .Counts 3}}<span class="pill st-urgent">Срочно: {{.}}</span>{{end}}
+      {{with count .Counts 2}}<span class="pill st-soon">Скоро менять: {{.}}</span>{{end}}
+      {{with count .Counts 1}}<span class="pill st-ok">Норм: {{.}}</span>{{end}}
+    </div>
+  </div>
+  <a class="btn" href="/add">+ Добавить компьютер</a>
+</div>
+
+<div class="grid">
+{{range .Cards}}
+  <section class="tile {{if .Has}}st-{{.R.Overall.Class}}-b{{end}}">
+    <div class="tile-head">
+      <div style="min-width:0">
+        {{if .M.Self}}<div class="tag">Этот компьютер</div>{{end}}
+        <a class="tile-name" href="/m/{{.M.ID}}">{{if .M.Name}}{{.M.Name}}{{else}}Новый компьютер{{end}}</a>
+      </div>
+      {{if .Has}}<span class="pill st-{{.R.Overall.Class}}">{{.R.Overall.Text}}</span>{{end}}
+    </div>
+    <div class="tile-meta">
+      {{if .Has}}{{.S.System.OS}}<br>Проверка: {{ago .S.CollectedAt}}{{else if .M.Self}}Ещё не проверялся{{else}}{{platform .M.Platform}} · ждём первые данные{{end}}
+    </div>
+    {{if .Silent}}<div class="notice warn" style="font-size:14px">Не выходил на связь {{days .Silent}} дн. — возможно, выключен или программу убрали.</div>{{end}}
+    {{if .Findings}}
+    <ul>{{range .Findings}}<li><span class="dot {{.Level.Class}}"></span><span>{{.Title}}</span></li>{{end}}</ul>
+    {{else if .Has}}
+    <div class="sub" style="font-size:14px">{{if .R.Incomplete}}Замечаний нет, но не всё удалось проверить.{{else}}Замечаний нет — диски, батарея и журнал ошибок в порядке.{{end}}</div>
+    {{end}}
+    <div class="tile-foot">
+      <a class="btn small" href="/m/{{.M.ID}}">Подробнее</a>
+      {{if .M.Self}}
+        {{if $.Checking}}<span class="sub" style="display:flex;gap:6px;align-items:center;font-size:14px"><span class="spin"></span>Проверяю…</span>
+        {{else}}<form class="inline" method="post" action="/check"><button class="btn small" type="submit">Проверить сейчас</button></form>{{end}}
+      {{end}}
+    </div>
+  </section>
+{{end}}
+  {{if eq (len .Cards) 1}}
+  <a class="empty-add" href="/add">
+    <b>Добавьте другие компьютеры</b>
+    <span>Они будут сами присылать сюда свои проверки каждые 6 часов. Им самим статусы не видны.</span>
+  </a>
+  {{end}}
+</div>
+{{end}}
