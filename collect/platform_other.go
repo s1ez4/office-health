@@ -18,6 +18,8 @@ func IsAdmin() bool {
 	return os.Geteuid() == 0
 }
 
+const NeedsAdmin = true // smartctl на Linux требует root
+
 func osName(platform, version string) string { return platform + " " + version }
 
 func volumeLabel(mount string) (string, bool) { return mount, true }

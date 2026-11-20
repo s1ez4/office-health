@@ -18,6 +18,9 @@ var smartctlKnownPaths = []string{
 	`C:\Program Files (x86)\smartmontools\bin\smartctl.exe`,
 }
 
+// NeedsAdmin — без администратора часть проверок может не сработать (стоит предупредить).
+const NeedsAdmin = true
+
 func osName(platform, version string) string { return platform + " " + version }
 
 func volumeLabel(mount string) (string, bool) { return mount, true }

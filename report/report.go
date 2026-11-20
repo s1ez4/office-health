@@ -21,8 +21,28 @@ import (
 //go:embed template.html
 var templateHTML string
 
-// page — всё, что видит шаблон. Диски склеены со своими оценками, чтобы в шаблоне было проще.
-type page struct {
+// NewTemplate — шаблон отчёта со всеми вспомогательными функциями.
+// Приложение (пакет app) берёт его и добавляет свои страницы, вставляя внутрь кусок "report-body".
+// template.Must — «если шаблон с ошибкой, сразу остановись»: это ошибка программиста, а не пользователя.
+func NewTemplate() *template.Template {
+	return template.Must(template.New("report").Funcs(Funcs).Parse(templateHTML))
+}
+
+// NewPage склеивает снимок с оценками в то, что показывает шаблон.
+func NewPage(s collect.Snapshot, r rules.Result) Page {
+	p := Page{S: s, R: r, Generated: s.CollectedAt.Format("02.01.2006 в 15:04")}
+	for i, d := range s.Disks.List {
+		p.Disks = append(p.Disks, diskRow{D: d, C: r.Disks[i]})
+	}
+	for i, v := range s.System.Volumes {
+		p.Volumes = append(p.Volumes, volumeRow{V: v, C: r.Volumes[i]})
+	}
+	return p
+}
+
+// Page — всё, что видит шаблон. Диски склеены со своими оценками, чтобы в шаблоне было проще.
+// С большой буквы — значит, видно из других пакетов («экспортировано»).
+type Page struct {
 	S         collect.Snapshot
 	R         rules.Result
 	Disks     []diskRow
@@ -40,8 +60,8 @@ type volumeRow struct {
 	C rules.Check
 }
 
-// funcs — маленькие функции, которые можно вызывать прямо из шаблона: {{f1 .RAMTotalGB}}.
-var funcs = template.FuncMap{
+// Funcs — маленькие функции, которые можно вызывать прямо из шаблона: {{f1 .RAMTotalGB}}.
+var Funcs = template.FuncMap{
 	"f0":  func(v float64) string { return fmt.Sprintf("%.0f", v) },
 	"f1":  func(v float64) string { return comma(fmt.Sprintf("%.1f", v)) },
 	"f1p": func(p *float64) string { return comma(fmt.Sprintf("%.1f", *p)) },
@@ -94,22 +114,12 @@ func Write(dir string, s collect.Snapshot, r rules.Result) (string, error) {
 	base := fmt.Sprintf("office-health_%s_%s", s.System.Hostname, s.CollectedAt.Format("2006-01-02_1504"))
 	htmlPath := filepath.Join(dir, base+".html")
 
-	p := page{S: s, R: r, Generated: s.CollectedAt.Format("02.01.2006 в 15:04")}
-	for i, d := range s.Disks.List {
-		p.Disks = append(p.Disks, diskRow{D: d, C: r.Disks[i]})
-	}
-	for i, v := range s.System.Volumes {
-		p.Volumes = append(p.Volumes, volumeRow{V: v, C: r.Volumes[i]})
-	}
-
-	// template.Must — «если шаблон с ошибкой, сразу остановись»: это ошибка программиста, а не пользователя.
-	tmpl := template.Must(template.New("report").Funcs(funcs).Parse(templateHTML))
 	f, err := os.Create(htmlPath)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close() // defer — «закрой файл, когда функция закончится», что бы ни случилось
-	if err := tmpl.Execute(f, p); err != nil {
+	if err := NewTemplate().ExecuteTemplate(f, "report", NewPage(s, r)); err != nil {
 		return "", err
 	}
 

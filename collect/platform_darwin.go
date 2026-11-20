@@ -26,6 +26,9 @@ func IsAdmin() bool {
 	return os.Geteuid() == 0
 }
 
+// На Mac всё нужное читается от обычного пользователя.
+const NeedsAdmin = false
+
 func osName(platform, version string) string { return "macOS " + version }
 
 // volumeLabel: на Mac десятки служебных разделов APFS. Показываем только данные пользователя

@@ -3,7 +3,6 @@
 package main
 
 import (
-	"os/exec"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -28,9 +27,4 @@ func startedByDoubleClick() bool {
 		return false
 	}
 	return true
-}
-
-// openFile открывает файл программой по умолчанию (HTML — в браузере), как двойной щелчок.
-func openFile(path string) error {
-	return exec.Command("rundll32", "url.dll,FileProtocolHandler", path).Start()
 }
