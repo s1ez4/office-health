@@ -18,6 +18,13 @@ var smartctlKnownPaths = []string{
 	`C:\Program Files (x86)\smartmontools\bin\smartctl.exe`,
 }
 
+func osName(platform, version string) string { return platform + " " + version }
+
+func volumeLabel(mount string) (string, bool) { return mount, true }
+
+// На Windows без smartctl дисков не узнать — в отчёте будет инструкция, как его поставить.
+func fallbackDisks() ([]Disk, error) { return nil, nil }
+
 // IsAdmin — запущена ли программа «от имени администратора».
 // Windows выдаёт каждому процессу «пропуск» (token); у админского он «повышенный» (elevated).
 func IsAdmin() bool {

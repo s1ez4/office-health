@@ -56,6 +56,9 @@ func TestThresholds(t *testing.T) {
 		{"0 WHEA", HWErrors(collect.HWErrors{Count: 0}).Level, OK},
 		{"1 WHEA", HWErrors(collect.HWErrors{Count: 1}).Level, Soon},
 		{"10 WHEA", HWErrors(collect.HWErrors{Count: 10}).Level, Urgent},
+		{"0 паник", HWErrors(collect.HWErrors{Source: collect.SourcePanic, Count: 0}).Level, OK},
+		{"1 паника", HWErrors(collect.HWErrors{Source: collect.SourcePanic, Count: 1}).Level, Soon},
+		{"3 паники", HWErrors(collect.HWErrors{Source: collect.SourcePanic, Count: 3}).Level, Urgent},
 		{"раздел 90%", Volume(collect.Volume{UsedPct: 90}).Level, OK},
 		{"раздел 90,5%", Volume(collect.Volume{UsedPct: 90.5}).Level, Soon},
 	}

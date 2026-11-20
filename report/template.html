@@ -57,7 +57,7 @@
 <body>
 <main>
 {{if .S.Demo}}<div class="demo">Демо-режим: данные выдуманные, это пример отчёта.</div>{{end}}
-{{if not .S.IsAdmin}}<div class="warn"><b>Запущено не от администратора.</b> Без прав администратора здоровье некоторых дисков может быть недоступно. Для полной проверки запустите программу правой кнопкой → «Запуск от имени администратора».</div>{{end}}
+{{if and (not .S.IsAdmin) (eq .S.Platform "windows")}}<div class="warn"><b>Запущено не от администратора.</b> Без прав администратора здоровье некоторых дисков может быть недоступно. Для полной проверки запустите программу правой кнопкой → «Запуск от имени администратора».</div>{{end}}
 
 <!-- Карточка компьютера и общий статус -->
 <div class="card">
@@ -84,6 +84,16 @@
 <h2>Диски</h2>
 {{if not .S.Disks.SmartctlFound}}
 <div class="card unknown">
+  {{if eq .S.Disks.Source "diskutil"}}
+  <div class="title">Проверка дисков упрощённая — нет программы smartctl</div>
+  <p>macOS сама сообщает только общий вердикт «исправен / неисправен». Чтобы видеть износ SSD и плохие сектора, поставьте smartmontools:</p>
+  <ul>
+    <li>в Терминале: <code>brew install smartmontools</code> (если нет Homebrew — сначала поставьте его с <code>brew.sh</code>)</li>
+  </ul>
+  {{else if eq .S.Platform "darwin"}}
+  <div class="title">Не найдена программа smartctl — здоровье дисков не проверено</div>
+  <p>Поставьте smartmontools в Терминале: <code>brew install smartmontools</code></p>
+  {{else}}
   <div class="title">Не найдена программа smartctl — здоровье дисков не проверено</div>
   <p>smartctl (пакет smartmontools) читает у дисков их «медкарту» — SMART. Поставить можно одним из способов:</p>
   <ul>
@@ -91,6 +101,7 @@
     <li>или скачать установщик с <code>smartmontools.org</code> (раздел Download → Windows)</li>
     <li>или просто положить <code>smartctl.exe</code> в одну папку с этой программой</li>
   </ul>
+  {{end}}
   <p class="muted">После установки запустите проверку ещё раз.</p>
 </div>
 {{else if not .Disks}}
@@ -138,20 +149,21 @@
     <div class="title">Здоровье батареи: {{f0 .HealthPct}}%</div>
     <span class="badge {{$.R.Battery.Level.Class}}">{{$.R.Battery.Level.Text}}</span>
   </div>
-  <div class="muted">Новая вмещала {{wh .DesignedMWh}} Вт·ч, сейчас — {{wh .FullChargeMWh}} Вт·ч</div>
+  <div class="muted">Новая вмещала {{capacity .Designed .Unit}}, сейчас — {{capacity .FullCharge .Unit}}{{if .Cycles}} · циклов зарядки: {{n .Cycles}}{{end}}</div>
   {{range $.R.Battery.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
 </div>
 {{end}}{{end}}
 
 <!-- Ошибки железа -->
 {{with .S.HWErrors}}
-<h2>Ошибки железа (WHEA)</h2>
+<h2>{{if eq .Source "panic"}}Аварийные перезагрузки (kernel panic){{else}}Ошибки железа (WHEA){{end}}</h2>
 <div class="card {{$.R.HWErrors.Level.Class}}">
   <div class="row">
     <div class="title">За {{.Days}} дней: {{.Count}}</div>
     <span class="badge {{$.R.HWErrors.Level.Class}}">{{$.R.HWErrors.Level.Text}}</span>
   </div>
-  {{if .Recent}}<ul class="events">{{range .Recent}}<li><span class="muted">{{date .Time}} · событие {{.ID}}</span> — {{.Message}}</li>{{end}}</ul>
+  {{if .Recent}}<ul class="events">{{range .Recent}}<li><span class="muted">{{date .Time}}{{if .ID}} · событие {{.ID}}{{end}}</span> — {{.Message}}</li>{{end}}</ul>
+  {{else if eq .Source "panic"}}<div class="muted">Mac не падал с критическими ошибками — это хорошо.</div>
   {{else}}<div class="muted">Windows не записывала аппаратных ошибок — это хорошо.</div>{{end}}
   {{range $.R.HWErrors.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
 </div>

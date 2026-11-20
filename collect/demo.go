@@ -13,6 +13,7 @@ func Demo() Snapshot {
 	now := time.Now()
 	return Snapshot{
 		CollectedAt: now,
+		Platform:    "windows",
 		Demo:        true,
 		IsAdmin:     true,
 		System: System{
@@ -44,10 +45,11 @@ func Demo() Snapshot {
 				},
 			},
 		},
-		Battery: &Battery{Present: true, DesignedMWh: 50000, FullChargeMWh: 27500, HealthPct: 55},
+		Battery: &Battery{Present: true, Designed: 50000, FullCharge: 27500, Unit: "mWh", HealthPct: 55, Cycles: ptr(int64(812))},
 		HWErrors: &HWErrors{
-			Days:  30,
-			Count: 3,
+			Source: SourceWHEA,
+			Days:   30,
+			Count:  3,
 			Recent: []HWEvent{
 				{Time: now.Add(-26 * time.Hour), ID: 19, Message: "Произошла исправленная аппаратная ошибка. Тип компонента: Ядро процессора"},
 				{Time: now.Add(-6 * 24 * time.Hour), ID: 17, Message: "Произошла исправленная аппаратная ошибка. Тип компонента: PCI Express Root Port"},

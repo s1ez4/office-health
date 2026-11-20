@@ -27,11 +27,18 @@ func (diskCollector) Collect(s *Snapshot) error {
 	path := findSmartctl()
 	if path == "" {
 		// Не ошибка программы: в отчёте покажем, как поставить smartctl.
+		// А на Mac пока возьмём хоть что-то у встроенной diskutil.
 		s.Disks.SmartctlFound = false
-		return nil
+		list, err := fallbackDisks()
+		if len(list) > 0 {
+			s.Disks.Source = "diskutil"
+			s.Disks.List = list
+		}
+		return err
 	}
 	s.Disks.SmartctlFound = true
 	s.Disks.SmartctlPath = path
+	s.Disks.Source = "smartctl"
 
 	devices, err := scanDisks(path)
 	if err != nil {

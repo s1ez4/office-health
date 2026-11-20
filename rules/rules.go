@@ -23,6 +23,9 @@ const (
 	WHEASoon   = 1  // ошибок железа за 30 дней (и больше) → «скоро менять»
 	WHEAUrgent = 10 // → «срочно»
 
+	PanicSoon   = 1 // kernel panic на Mac за 30 дней → «скоро» (каждая — внезапная перезагрузка)
+	PanicUrgent = 3 // → «срочно»
+
 	VolumeFullSoon = 90 // раздел заполнен больше чем на, % → «скоро» (это не износ, но полезно знать)
 )
 
@@ -107,7 +110,7 @@ func Evaluate(s collect.Snapshot) Result {
 	for _, c := range all {
 		r.Overall = max(r.Overall, c.Level)
 	}
-	// Диски — главное. Если их не проверили, «Норм» говорить рано.
+	// Диски — главное. Если их не проверили (или проверили только поверхностно, через diskutil), «Норм» говорить рано.
 	r.Incomplete = !s.Disks.SmartctlFound || len(s.Disks.List) == 0
 	for _, c := range r.Disks {
 		if c.Level == Unknown {
@@ -197,6 +200,9 @@ func Battery(b collect.Battery) Check {
 
 // HWErrors — проверка журнала аппаратных ошибок.
 func HWErrors(e collect.HWErrors) Check {
+	if e.Source == collect.SourcePanic {
+		return panics(e)
+	}
 	c := Check{Level: OK}
 	switch n := e.Count; {
 	case n >= WHEAUrgent:
@@ -207,6 +213,23 @@ func HWErrors(e collect.HWErrors) Check {
 		c.add(Soon, fmt.Sprintf("Ошибок железа за %d дней: %d", e.Days, n),
 			"Windows записала аппаратные сбои, которые сама исправила. Единичные — не беда, "+
 				"но если они повторяются, стоит проверить память и не перегревается ли компьютер (почистить от пыли).")
+	}
+	return c
+}
+
+// panics — то же для Mac: аварийные перезагрузки (kernel panic).
+func panics(e collect.HWErrors) Check {
+	c := Check{Level: OK}
+	switch n := e.Count; {
+	case n >= PanicUrgent:
+		c.add(Urgent, fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
+			"Mac регулярно падает с kernel panic — так обычно проявляются неисправная память, диск, перегрев "+
+				"или сбойное подключённое устройство. Сделайте резервную копию (Time Machine) и покажите Mac в сервисе; "+
+				"перед этим попробуйте отключить все внешние устройства и посмотреть, повторится ли.")
+	case n >= PanicSoon:
+		c.add(Soon, fmt.Sprintf("Аварийных перезагрузок за %d дней: %d", e.Days, n),
+			"Mac хотя бы раз перезагрузился из-за критической ошибки. Единичный случай бывает из-за программы или "+
+				"переходника; если повторится — проверьте Mac в сервисе. Обновите macOS и держите свежую копию Time Machine.")
 	}
 	return c
 }

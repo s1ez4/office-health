@@ -12,6 +12,7 @@ package collect
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 )
 
@@ -19,6 +20,7 @@ import (
 // Метки `json:"..."` подсказывают, как называть поля при сохранении в JSON-файл.
 type Snapshot struct {
 	CollectedAt time.Time `json:"collected_at"`
+	Platform    string    `json:"platform"` // windows, darwin (Mac), linux
 	Demo        bool      `json:"demo"`     // true — данные выдуманные (флаг --demo)
 	IsAdmin     bool      `json:"is_admin"` // запущено ли от администратора
 	System      System    `json:"system"`
@@ -43,7 +45,7 @@ func All() []Collector {
 
 // Run запускает всех сборщиков по очереди и возвращает готовый снимок.
 func Run() Snapshot {
-	s := Snapshot{CollectedAt: time.Now(), IsAdmin: IsAdmin()}
+	s := Snapshot{CollectedAt: time.Now(), Platform: runtime.GOOS, IsAdmin: IsAdmin()}
 	for _, c := range All() {
 		if err := c.Collect(&s); err != nil {
 			s.Warnings = append(s.Warnings, fmt.Sprintf("%s: %v", c.Name(), err))

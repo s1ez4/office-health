@@ -46,17 +46,17 @@ func (batteryCollector) Collect(s *Snapshot) error {
 	}
 
 	// Батарей бывает несколько (у некоторых ноутбуков две) — складываем.
-	b := Battery{Present: true}
+	b := Battery{Present: true, Unit: "mWh"}
 	for _, x := range static {
-		b.DesignedMWh += int64(x.DesignedCapacity)
+		b.Designed += int64(x.DesignedCapacity)
 	}
 	for _, x := range full {
-		b.FullChargeMWh += int64(x.FullChargedCapacity)
+		b.FullCharge += int64(x.FullChargedCapacity)
 	}
-	if b.DesignedMWh == 0 {
+	if b.Designed == 0 {
 		return errors.New("батарея не сообщила свою заводскую ёмкость")
 	}
-	b.HealthPct = float64(b.FullChargeMWh) / float64(b.DesignedMWh) * 100
+	b.HealthPct = float64(b.FullCharge) / float64(b.Designed) * 100
 	s.Battery = &b
 	return nil
 }

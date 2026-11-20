@@ -45,7 +45,7 @@ func (systemCollector) Collect(s *Snapshot) error {
 		return err
 	}
 	s.System.Hostname = info.Hostname
-	s.System.OS = strings.TrimSpace(info.Platform + " " + info.PlatformVersion)
+	s.System.OS = strings.TrimSpace(osName(info.Platform, info.PlatformVersion)) // своя функция у каждой ОС
 	s.System.UptimeHours = (time.Duration(info.Uptime) * time.Second).Hours()
 
 	// Процессор: название берём у первого, ядра считаем логические (с учётом Hyper-Threading).
@@ -67,12 +67,16 @@ func (systemCollector) Collect(s *Snapshot) error {
 		return err
 	}
 	for _, p := range parts {
+		label, ok := volumeLabel(p.Mountpoint) // на Mac пропускаем служебные разделы
+		if !ok {
+			continue
+		}
 		u, err := disk.Usage(p.Mountpoint)
 		if err != nil || u.Total == 0 {
 			continue // например, пустой картридер — пропускаем
 		}
 		s.System.Volumes = append(s.System.Volumes, Volume{
-			Mount:   p.Mountpoint,
+			Mount:   label,
 			FS:      p.Fstype,
 			TotalGB: float64(u.Total) / gb,
 			FreeGB:  float64(u.Free) / gb,

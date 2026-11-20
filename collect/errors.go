@@ -30,7 +30,7 @@ func parseWinEvents(data []byte) (HWErrors, error) {
 	if err := json.Unmarshal(data, &events); err != nil {
 		return HWErrors{}, fmt.Errorf("не понял ответ журнала: %w", err)
 	}
-	res := HWErrors{Days: HWErrorDays, Count: len(events)}
+	res := HWErrors{Source: SourceWHEA, Days: HWErrorDays, Count: len(events)}
 	for i, e := range events {
 		if i == HWErrorRecent {
 			break
