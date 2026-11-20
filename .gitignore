@@ -1,0 +1,6 @@
+# собранные программы и отчёты — в git не храним
+*.exe
+reports/
+*.html
+*.json
+!report/*.html
