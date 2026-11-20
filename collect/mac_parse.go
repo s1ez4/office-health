@@ -5,6 +5,7 @@ package collect
 // проверить разбор на Windows по образцам. Сам запуск этих программ — в *_darwin.go.
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,7 +45,36 @@ func parseIoregBattery(out string) Battery {
 	if c, ok := vals["CycleCount"]; ok {
 		b.Cycles = ptr(c)
 	}
+	if c, ok := vals["DesignCycleCount9C"]; ok && c > 0 { // на сколько циклов рассчитана батарея (обычно 1000)
+		b.DesignCycles = ptr(c)
+	}
 	return b
+}
+
+// parseHardwareProfile разбирает `system_profiler SPHardwareDataType -json` — паспорт Mac:
+// название модели, её код и чип (Apple M1…) или процессор (Intel).
+func parseHardwareProfile(data []byte) (model, chip string) {
+	var p struct {
+		Items []struct {
+			Name    string `json:"machine_name"`  // MacBook Pro
+			Model   string `json:"machine_model"` // MacBookPro18,3
+			Chip    string `json:"chip_type"`     // Apple M1 Pro (у Apple Silicon)
+			CPUType string `json:"cpu_type"`      // 6-Core Intel Core i7 (у Intel)
+		} `json:"SPHardwareDataType"`
+	}
+	if json.Unmarshal(data, &p) != nil || len(p.Items) == 0 {
+		return "", ""
+	}
+	it := p.Items[0]
+	model = it.Name
+	if it.Model != "" {
+		model = strings.TrimSpace(model + " (" + it.Model + ")")
+	}
+	chip = it.Chip
+	if chip == "" {
+		chip = it.CPUType
+	}
+	return model, chip
 }
 
 var diskutilDisk = regexp.MustCompile(`^/dev/(disk\d+) \(([^)]*)\):`)

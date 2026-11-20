@@ -49,6 +49,8 @@ type Battery struct {
 	Unit       string  `json:"unit"`        // в чём ёмкость: "mWh" (Windows) или "mAh" (Mac)
 	HealthPct  float64 `json:"health_pct"`  // FullCharge / Designed × 100
 	Cycles     *int64  `json:"cycles,omitempty"`
+	// DesignCycles — на сколько циклов зарядки рассчитана батарея (Mac сообщает, обычно 1000)
+	DesignCycles *int64 `json:"design_cycles,omitempty"`
 }
 
 // Источники ошибок железа

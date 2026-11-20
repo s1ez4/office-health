@@ -169,6 +169,7 @@ footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap
 {{else}}
 <article class="glass card"><div class="sub">Диски не найдены. Проверьте, установлен ли smartctl и запущен ли агент от администратора.</div></article>
 {{end}}
+{{with .DiskHint}}<article class="glass card"><div class="sub">{{.}}</div></article>{{end}}
 </div>
 </section>
 
@@ -184,14 +185,19 @@ footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap
 <div style="display:flex;align-items:flex-end;gap:18px"><div class="huge">{{.HealthPct}}%</div><div class="mono sub" style="font-size:10px;padding-bottom:6px">от заводской<br>ёмкости</div></div>
 <div style="display:flex;gap:3px" aria-hidden="true">{{range .Segments}}<div style="flex:1;height:18px;border-radius:3px;background:{{if .}}#0B0B0C{{else}}rgba(11,11,12,.14){{end}}"></div>{{end}}</div>
 <div class="stats" style="grid-template-columns:1fr 1fr">
+{{if .Cycles}}
+<div class="stat"><b>{{.Cycles}}</b><span class="mono">циклов зарядки</span></div>
+{{if .DesignCycles}}<div class="stat"><b>{{.DesignCycles}}</b><span class="mono">ресурс по apple</span></div>{{end}}
+{{else}}
 <div class="stat"><b>{{.DesignMWh}}</b><span class="mono">мВт·ч заводская</span></div>
 <div class="stat"><b>{{.FullMWh}}</b><span class="mono">мВт·ч сейчас</span></div>
+{{end}}
 </div>
 </article>
 {{end}}
 <article class="glass card">
 <div class="card-head">
-<div><div class="mono sub">журнал whea · 30 дней</div><div class="card-title">Ошибки железа</div></div>
+<div><div class="mono sub">{{.HWErrors.Caption}}</div><div class="card-title">Ошибки железа</div></div>
 <span class="mono pill pill-{{.HWErrors.Level}}">{{.HWErrors.Label}}</span>
 </div>
 <div class="huge">{{.HWErrors.Count}}</div>
@@ -201,7 +207,7 @@ footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap
 </section>
 
 <footer class="mono">
-<span>*данные: smartctl / wmi / журнал windows</span>
+<span>*данные: {{.Sources}}</span>
 <span>( office—health · v{{.AgentVersion}} )</span>
 <span style="text-align:right">проверка {{.ScanTime}}</span>
 </footer>

@@ -26,8 +26,21 @@ func IsAdmin() bool {
 	return os.Geteuid() == 0
 }
 
-// На Mac всё нужное читается от обычного пользователя.
-const NeedsAdmin = false
+// На Mac smartctl без sudo может не открыть диск — стоит предупредить.
+const NeedsAdmin = true
+
+// init() вызывается сам при старте программы, ещё до main(). Здесь подменяем «общие» функции
+// на маковские — файлы для Windows при этом не меняются.
+func init() {
+	AdminHint = "Запустите через sudo: sudo ./office-health report (Mac попросит пароль от вашей учётной записи)."
+	machineModel = func() (string, string) {
+		out, err := exec.Command("system_profiler", "SPHardwareDataType", "-json").Output()
+		if err != nil {
+			return "", ""
+		}
+		return parseHardwareProfile(out)
+	}
+}
 
 func osName(platform, version string) string { return "macOS " + version }
 

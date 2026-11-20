@@ -12,10 +12,8 @@ import (
 
 	"office-health/collect"
 	"office-health/rules"
+	"office-health/version"
 )
-
-// Version — версия программы, видна в подвале отчёта.
-const Version = "0.2.0"
 
 type ReportView struct {
 	Hostname, ScanTime, AgentVersion string
@@ -24,11 +22,14 @@ type ReportView struct {
 	Specs                            []string                          // «Windows 11 Pro», «RAM 8 ГБ»…
 	Actions                          []Action                          // от срочных к менее срочным
 	Disks                            []Disk
+	DiskHint                         string   // подсказка под дисками: как поставить smartctl
 	Battery                          *Battery // nil, если батареи нет
 	HWErrors                         struct {
 		Level, Label, Count string
+		Caption             string // «журнал whea · 30 дней» или «отчёты о сбоях · 30 дней» (Mac)
 		Items               []ErrItem
 	}
+	Sources string // откуда данные (подвал): «smartctl / wmi / журнал windows»
 }
 
 // Action — одно дело «что сделать». Label: «▲ срочно» / «◆ скоро» / «● норма»; Short — 2–4 слова для окна сводки.
@@ -50,6 +51,8 @@ type Battery struct {
 	HealthPct          int
 	DesignMWh, FullMWh string
 	Segments           []bool // 10 делений: true — закрашено
+	// На Mac вместо мВт·ч показываем циклы зарядки: Cycles непустой — шаблон рисует их
+	Cycles, DesignCycles string
 }
 
 type ErrItem struct{ Text, Time string }
@@ -110,8 +113,26 @@ func BuildView(s collect.Snapshot, r rules.Result) ReportView {
 	v := ReportView{
 		Hostname:     s.System.Hostname,
 		ScanTime:     s.CollectedAt.Format("02.01.2006 15:04"),
-		AgentVersion: Version,
+		AgentVersion: version.Version,
 		Specs:        specs(s),
+	}
+	mac := s.Platform == "darwin"
+	switch {
+	case mac:
+		v.Sources = "smartctl / ioreg / отчёты о сбоях macos"
+	case s.Platform == "linux":
+		v.Sources = "smartctl"
+	default:
+		v.Sources = "smartctl / wmi / журнал windows"
+	}
+	if !s.Disks.SmartctlFound {
+		if mac {
+			v.DiskHint = "Подробная проверка дисков (износ SSD) недоступна: нет программы smartctl. " +
+				"Поставьте её в Терминале: brew install smartmontools — и запустите проверку ещё раз."
+		} else {
+			v.DiskHint = "Здоровье дисков не проверено: нет программы smartctl. Поставьте её: " +
+				"winget install smartmontools.smartmontools — или положите smartctl.exe рядом с программой."
+		}
 	}
 
 	// Общий статус и заголовок
@@ -181,6 +202,12 @@ func BuildView(s collect.Snapshot, r rules.Result) ReportView {
 		filled := min(max(int(math.Round(b.HealthPct/10)), 0), 10)
 		bv := &Battery{Level: level(r.Battery.Level), Label: label(r.Battery.Level), HealthPct: health,
 			DesignMWh: thousands(b.Designed), FullMWh: thousands(b.FullCharge)}
+		if b.Unit == "mAh" { // Mac: ёмкость в мА·ч в карточке не нужна — важнее циклы
+			bv.Cycles = num(b.Cycles)
+			if b.DesignCycles != nil {
+				bv.DesignCycles = thousands(*b.DesignCycles)
+			}
+		}
 		for i := 0; i < 10; i++ {
 			bv.Segments = append(bv.Segments, i < filled)
 		}
@@ -188,7 +215,16 @@ func BuildView(s collect.Snapshot, r rules.Result) ReportView {
 	}
 
 	// Ошибки железа
+	v.HWErrors.Caption = "журнал whea · 30 дней"
+	if mac {
+		v.HWErrors.Caption = "отчёты о сбоях · 30 дней"
+	}
 	if e := s.HWErrors; e != nil {
+		src := "журнал whea"
+		if e.Source == collect.SourcePanic {
+			src = "отчёты о сбоях"
+		}
+		v.HWErrors.Caption = fmt.Sprintf("%s · %d дней", src, e.Days)
 		v.HWErrors.Level, v.HWErrors.Label, v.HWErrors.Count = level(r.HWErrors.Level), label(r.HWErrors.Level), two(e.Count)
 		for _, it := range e.Recent {
 			text := it.Message
@@ -253,7 +289,11 @@ func diskView(i int, d collect.Disk, c rules.Check, s collect.Snapshot) Disk {
 // specs — короткие характеристики компьютера для окна сводки.
 func specs(s collect.Snapshot) []string {
 	clean := strings.NewReplacer("Microsoft ", "", "(R)", "", "(TM)", "", "  ", " ")
-	out := []string{strings.TrimSpace(clean.Replace(s.System.OS))}
+	var out []string
+	if s.System.Model != "" {
+		out = append(out, s.System.Model)
+	}
+	out = append(out, strings.TrimSpace(clean.Replace(s.System.OS)))
 	if s.System.CPU != "" {
 		out = append(out, strings.TrimSpace(clean.Replace(s.System.CPU)))
 	}

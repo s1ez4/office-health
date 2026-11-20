@@ -23,8 +23,23 @@ func TestIoregAppleSilicon(t *testing.T) {
 	if !b.Present || b.Designed != 4382 || b.FullCharge != 3772 || b.Unit != "mAh" {
 		t.Fatalf("батарея: %+v", b)
 	}
-	if math.Abs(b.HealthPct-86.08) > 0.1 || *b.Cycles != 287 {
+	if math.Abs(b.HealthPct-86.08) > 0.1 || *b.Cycles != 287 || *b.DesignCycles != 1000 {
 		t.Errorf("здоровье %.2f%%, циклов %d", b.HealthPct, *b.Cycles)
+	}
+}
+
+func TestHardwareProfile(t *testing.T) {
+	m, c := parseHardwareProfile([]byte(`{"SPHardwareDataType":[{"_name":"hardware_overview","chip_type":"Apple M1 Pro",
+		"machine_model":"MacBookPro18,3","machine_name":"MacBook Pro","physical_memory":"16 GB"}]}`))
+	if m != "MacBook Pro (MacBookPro18,3)" || c != "Apple M1 Pro" {
+		t.Errorf("Apple Silicon: %q %q", m, c)
+	}
+	m, c = parseHardwareProfile([]byte(`{"SPHardwareDataType":[{"cpu_type":"6-Core Intel Core i7","machine_model":"MacBookPro16,1","machine_name":"MacBook Pro"}]}`))
+	if m != "MacBook Pro (MacBookPro16,1)" || c != "6-Core Intel Core i7" {
+		t.Errorf("Intel: %q %q", m, c)
+	}
+	if m, _ := parseHardwareProfile([]byte("мусор")); m != "" {
+		t.Error("из мусора получилась модель")
 	}
 }
 

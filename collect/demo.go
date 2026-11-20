@@ -7,6 +7,46 @@ import "time"
 // чтобы не писать отдельную копию для каждого.
 func ptr[T any](v T) *T { return &v }
 
+// DemoFor — выдуманный компьютер нужной системы: "darwin" — Mac, иначе Windows.
+func DemoFor(platform string) Snapshot {
+	if platform == "darwin" {
+		return DemoMac()
+	}
+	return Demo()
+}
+
+// DemoMac — выдуманный MacBook на M1: встроенный SSD отдаёт smartctl не всё (нет секторов —
+// у NVMe их и не бывает), батарее 287 циклов, одна аварийная перезагрузка за месяц.
+func DemoMac() Snapshot {
+	now := time.Now()
+	return Snapshot{
+		CollectedAt: now,
+		Platform:    "darwin",
+		Demo:        true,
+		IsAdmin:     true,
+		System: System{
+			Hostname: "Office-MacBook-Pro", Model: "MacBook Pro (MacBookPro18,3)",
+			OS: "macOS 15.1", CPU: "Apple M1 Pro", CPUCores: 10, RAMTotalGB: 16, RAMUsedPct: 68, UptimeHours: 77,
+			Volumes: []Volume{{Mount: "Macintosh HD", FS: "apfs", TotalGB: 460.4, FreeGB: 82.6, UsedPct: 82.1}},
+		},
+		Disks: Disks{
+			SmartctlFound: true, SmartctlPath: "/opt/homebrew/sbin/smartctl", Source: "smartctl",
+			List: []Disk{{
+				Device: "/dev/disk0", Model: "APPLE SSD AP0512Q", Serial: "0ba01234a1b2c3d4", Kind: "NVMe",
+				CapacityGB: 465.9, SmartPassed: ptr(true), PowerOnHours: ptr(int64(2840)),
+				PercentUsed: ptr(int64(3)), WrittenTB: ptr(41.2), Volumes: []string{"Macintosh HD"},
+			}},
+		},
+		Battery: &Battery{Present: true, Designed: 4382, FullCharge: 3772, Unit: "mAh", HealthPct: 86.1,
+			Cycles: ptr(int64(287)), DesignCycles: ptr(int64(1000))},
+		HWErrors: &HWErrors{
+			Source: SourcePanic, Days: 30, Count: 1,
+			Recent: []HWEvent{{Time: now.Add(-9 * 24 * time.Hour),
+				Message: "Kernel panic: panic(cpu 4 caller 0xfffffe0029a1c2d4): watchdog timeout: no checkins from watchdogd in 90 seconds"}},
+		},
+	}
+}
+
 // Demo — правдоподобный выдуманный компьютер для флага --demo:
 // один здоровый SSD, один умирающий HDD, батарея 55%, 3 ошибки WHEA.
 func Demo() Snapshot {

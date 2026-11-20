@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"office-health/agent"
@@ -130,17 +131,18 @@ func runReport(args []string) int {
 	demo := fs.Bool("demo", false, "выдуманные данные вместо настоящих — посмотреть, как выглядит отчёт")
 	out := fs.String("out", defaultOutDir(), "папка для отчётов")
 	quiet := fs.Bool("quiet", false, "не открывать отчёт (для Планировщика задач)")
+	demoOS := fs.String("demo-os", runtime.GOOS, "для --demo: какой компьютер выдумать — windows или darwin (Mac)")
 	fs.Parse(args)
 
 	var s collect.Snapshot
 	if *demo {
 		fmt.Println("Демо-режим: данные выдуманные.")
-		s = collect.Demo()
+		s = collect.DemoFor(*demoOS)
 	} else {
 		if !collect.IsAdmin() && collect.NeedsAdmin {
 			fmt.Println("⚠ Программа запущена НЕ от администратора.")
 			fmt.Println("  Без прав администратора здоровье некоторых дисков может быть недоступно.")
-			fmt.Println("  Нажмите на office-health.exe правой кнопкой → «Запуск от имени администратора».")
+			fmt.Println("  " + collect.AdminHint)
 			fmt.Println()
 		}
 		fmt.Println("Проверяю компьютер…")

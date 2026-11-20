@@ -13,6 +13,7 @@ import (
 // System — общие сведения о компьютере.
 type System struct {
 	Hostname    string   `json:"hostname"`
+	Model       string   `json:"model,omitempty"` // модель компьютера: «MacBook Pro (MacBookPro18,3)»
 	OS          string   `json:"os"`
 	CPU         string   `json:"cpu"`
 	CPUCores    int      `json:"cpu_cores"`
@@ -32,6 +33,14 @@ type Volume struct {
 }
 
 const gb = 1024 * 1024 * 1024 // байт в гигабайте
+
+// machineModel — модель компьютера и процессор, если ОС умеет их назвать точнее, чем gopsutil.
+// Это переменная-функция: по умолчанию «ничего не знаю», а файл для Mac в своей init() подменяет её
+// на настоящую. Так файлы для Windows трогать не нужно.
+var machineModel = func() (model, chip string) { return "", "" }
+
+// AdminHint — как запустить с правами администратора (Mac подменяет на подсказку про sudo).
+var AdminHint = "Нажмите на office-health.exe правой кнопкой → «Запуск от имени администратора»."
 
 // systemCollector работает на любой ОС: gopsutil сам знает, как спросить у Windows, Mac или Linux.
 // struct{} — пустая структура: данных у сборщика нет, только методы.
@@ -54,6 +63,11 @@ func (systemCollector) Collect(s *Snapshot) error {
 	}
 	if n, err := cpu.Counts(true); err == nil {
 		s.System.CPUCores = n
+	}
+	model, chip := machineModel()
+	s.System.Model = model
+	if chip != "" && s.System.CPU == "" {
+		s.System.CPU = chip
 	}
 
 	if m, err := mem.VirtualMemory(); err == nil {

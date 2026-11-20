@@ -27,7 +27,7 @@ func TestDemoReport(t *testing.T) {
 		"Samsung SSD 980 500GB", "18,4 ТБ", "width:12%", // SSD: износ, записано, полоска
 		"55%", "50 000", // батарея
 		"Заменить HDD", "Заказать батарею", // короткие дела в сводке
-		"v0.2.0",
+		"vdev", "журнал whea · 30 дней", "smartctl / wmi / журнал windows",
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("в отчёте нет %q", want)
@@ -82,6 +82,37 @@ func TestBuildView(t *testing.T) {
 	s.Battery = &collect.Battery{Present: false}
 	if BuildView(s, rules.Evaluate(s)).Battery != nil {
 		t.Error("у ПК без батареи появилась батарея")
+	}
+}
+
+// Mac: циклы вместо мВт·ч, «отчёты о сбоях», модель Mac в характеристиках; без smartctl — подсказка про brew
+func TestMacView(t *testing.T) {
+	s := collect.DemoMac()
+	v := BuildView(s, rules.Evaluate(s))
+	if v.Battery.Cycles != "287" || v.Battery.DesignCycles != "1 000" {
+		t.Errorf("циклы: %+v", v.Battery)
+	}
+	if v.HWErrors.Caption != "отчёты о сбоях · 30 дней" || v.HWErrors.Level != "soon" || v.Sources != "smartctl / ioreg / отчёты о сбоях macos" {
+		t.Errorf("подписи Mac: %q %q %q", v.HWErrors.Caption, v.HWErrors.Level, v.Sources)
+	}
+	if v.Specs[0] != "MacBook Pro (MacBookPro18,3)" || !v.Disks[0].IsSSD || v.Disks[0].Letter != "Macintosh HD" || v.Disks[0].UsedPct != 82 {
+		t.Errorf("Mac: specs %v, диск %+v", v.Specs, v.Disks[0])
+	}
+	if v.DiskHint != "" {
+		t.Error("smartctl есть, а подсказка про него показана")
+	}
+
+	// Без smartctl: diskutil дал только вердикт → таблица с прочерками и подсказка про brew
+	s.Disks = collect.Disks{Source: "diskutil", List: []collect.Disk{{Model: "APPLE SSD AP0512Q", Kind: "SSD", SmartPassed: s.Disks.List[0].SmartPassed}}}
+	v = BuildView(s, rules.Evaluate(s))
+	if !strings.Contains(v.DiskHint, "brew install smartmontools") || v.Disks[0].IsSSD || v.Disks[0].Hours != "—" {
+		t.Errorf("без smartctl: подсказка %q, диск %+v", v.DiskHint, v.Disks[0])
+	}
+
+	// Mac mini без батареи — карточки нет
+	s.Battery = &collect.Battery{Present: false}
+	if BuildView(s, rules.Evaluate(s)).Battery != nil {
+		t.Error("у Mac mini появилась батарея")
 	}
 }
 
