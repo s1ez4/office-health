@@ -73,6 +73,7 @@ var funcs = template.FuncMap{
 		return fmt.Sprintf("%.0f дн.", h/24)
 	},
 	"date": func(t time.Time) string { return t.Format("02.01.2006 15:04") },
+	"wh":   func(mwh int64) string { return comma(fmt.Sprintf("%.1f", float64(mwh)/1000)) }, // мВт·ч → Вт·ч
 }
 
 // comma — в России дробную часть отделяют запятой: 7,9 а не 7.9.

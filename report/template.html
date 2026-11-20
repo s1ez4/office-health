@@ -35,7 +35,7 @@
   .soon { background: var(--soon-bg); color: var(--soon); }
   .urgent { background: var(--urgent-bg); color: var(--urgent); }
   .unknown { background: var(--unknown-bg); color: var(--unknown); }
-  .card.ok, .card.soon, .card.urgent, .card.unknown { background: var(--card); border-left: 6px solid; }
+  .card.ok, .card.soon, .card.urgent, .card.unknown { background: var(--card); color: var(--text); border-left: 6px solid; }
   .card.ok { border-left-color: var(--ok); } .card.soon { border-left-color: var(--soon); }
   .card.urgent { border-left-color: var(--urgent); } .card.unknown { border-left-color: var(--line); }
 
@@ -57,7 +57,7 @@
 <body>
 <main>
 {{if .S.Demo}}<div class="demo">Демо-режим: данные выдуманные, это пример отчёта.</div>{{end}}
-{{if not .S.IsAdmin}}<div class="warn"><b>Запущено не от администратора.</b> Здоровье дисков и журнал ошибок без прав администратора недоступны — запустите программу правой кнопкой → «Запуск от имени администратора».</div>{{end}}
+{{if not .S.IsAdmin}}<div class="warn"><b>Запущено не от администратора.</b> Без прав администратора здоровье некоторых дисков может быть недоступно. Для полной проверки запустите программу правой кнопкой → «Запуск от имени администратора».</div>{{end}}
 
 <!-- Карточка компьютера и общий статус -->
 <div class="card">
@@ -75,6 +75,7 @@
     <div class="big {{.R.Overall.Class}}">
       <div class="lbl">Общий статус</div>
       <div class="val">{{.R.Overall.Text}}</div>
+      {{if .R.Incomplete}}<div class="lbl">но не всё удалось проверить — см. ниже</div>{{end}}
     </div>
   </div>
 </div>
@@ -137,7 +138,7 @@
     <div class="title">Здоровье батареи: {{f0 .HealthPct}}%</div>
     <span class="badge {{$.R.Battery.Level.Class}}">{{$.R.Battery.Level.Text}}</span>
   </div>
-  <div class="muted">Новая вмещала {{.DesignedMWh}} мВт·ч, сейчас — {{.FullChargeMWh}} мВт·ч</div>
+  <div class="muted">Новая вмещала {{wh .DesignedMWh}} Вт·ч, сейчас — {{wh .FullChargeMWh}} Вт·ч</div>
   {{range $.R.Battery.Findings}}<div class="finding {{.Level.Class}}"><b>{{.Title}}</b>{{.Advice}}</div>{{end}}
 </div>
 {{end}}{{end}}

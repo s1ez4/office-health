@@ -15,7 +15,7 @@ func platformCollectors() []Collector {
 }
 
 var smartctlKnownPaths = []string{
-	"/usr/local/sbin/smartctl",   // Homebrew на Intel-Mac, Linux
+	"/usr/local/sbin/smartctl",    // Homebrew на Intel-Mac, Linux
 	"/opt/homebrew/sbin/smartctl", // Homebrew на Apple Silicon
 	"/usr/sbin/smartctl",
 }

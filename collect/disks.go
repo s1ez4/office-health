@@ -115,12 +115,12 @@ type smartJSON struct {
 		Name     string `json:"name"`
 		Protocol string `json:"protocol"` // ATA, NVMe, SCSI
 	} `json:"device"`
-	ModelName        string `json:"model_name"`
-	SerialNumber     string `json:"serial_number"`
-	UserCapacity     struct{ Bytes int64 } `json:"user_capacity"`
-	NVMeCapacity     int64  `json:"nvme_total_capacity"`
-	LogicalBlockSize int64  `json:"logical_block_size"`
-	RotationRate     *int   `json:"rotation_rate"` // 0 — SSD, 5400/7200 — HDD (обороты в минуту)
+	ModelName        string                 `json:"model_name"`
+	SerialNumber     string                 `json:"serial_number"`
+	UserCapacity     struct{ Bytes int64 }  `json:"user_capacity"`
+	NVMeCapacity     int64                  `json:"nvme_total_capacity"`
+	LogicalBlockSize int64                  `json:"logical_block_size"`
+	RotationRate     *int                   `json:"rotation_rate"` // 0 — SSD, 5400/7200 — HDD (обороты в минуту)
 	SmartStatus      *struct{ Passed bool } `json:"smart_status"`
 	PowerOnTime      *struct{ Hours int64 } `json:"power_on_time"`
 	ATAAttributes    struct {

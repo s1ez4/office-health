@@ -33,7 +33,7 @@ func main() {
 	} else {
 		if !collect.IsAdmin() {
 			fmt.Println("⚠ Программа запущена НЕ от администратора.")
-			fmt.Println("  Здоровье дисков и журнал ошибок без прав администратора недоступны.")
+			fmt.Println("  Без прав администратора здоровье некоторых дисков может быть недоступно.")
 			fmt.Println("  Нажмите на office-health.exe правой кнопкой → «Запуск от имени администратора».")
 			fmt.Println()
 		}
@@ -50,6 +50,9 @@ func main() {
 
 	fmt.Println("Компьютер:", s.System.Hostname)
 	fmt.Println("Общий статус:", r.Overall.Text())
+	if r.Incomplete {
+		fmt.Println("  (не всё удалось проверить — подробности в отчёте)")
+	}
 	for _, w := range s.Warnings {
 		fmt.Println("Не удалось:", w)
 	}
@@ -59,10 +62,11 @@ func main() {
 // defaultOutDir — папка reports рядом с программой.
 // Именно рядом с .exe, а не «в текущей папке»: Планировщик задач запускает программы
 // из C:\Windows\System32, и отчёты улетели бы туда.
-// Исключение — запуск через `go run`: тогда .exe временный, и берём текущую папку.
+// Исключение — запуск через `go run`: тогда .exe временный (во временной папке или в кэше
+// сборки go-build), и берём текущую папку.
 func defaultOutDir() string {
 	exe, err := os.Executable()
-	if err != nil || strings.HasPrefix(exe, os.TempDir()) {
+	if err != nil || strings.HasPrefix(exe, os.TempDir()) || strings.Contains(exe, "go-build") {
 		return "reports"
 	}
 	return filepath.Join(filepath.Dir(exe), "reports")
