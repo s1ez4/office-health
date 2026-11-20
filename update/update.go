@@ -29,8 +29,18 @@ var Repo = "s1ez4/office-health"
 // SourceEnv — переменная окружения с адресом своего сервера релизов (для проверки обновления без GitHub).
 const SourceEnv = "OFFICE_HEALTH_UPDATE_URL"
 
-// Timeout — сколько ждать GitHub. Без сети запрос падает быстро, а при плохой сети не держим запуск дольше.
-const Timeout = 15 * time.Second
+// Два разных ожидания:
+//   - CheckTimeout — сколько ждать ответа «какой последний релиз». Короткое: без сети или при
+//     недоступном GitHub программа быстро идёт работать дальше.
+//   - DownloadTimeout — сколько ждать скачивания архива. Длинное: на медленном канале 6 МБ с GitHub
+//     могут качаться минуту и больше (так и было при первой проверке — 75 секунд).
+const (
+	CheckTimeout    = 15 * time.Second
+	DownloadTimeout = 10 * time.Minute
+)
+
+// Notify — куда сообщить «начинаю скачивать». По умолчанию в консоль; nil — молча.
+var Notify = func(msg string) { fmt.Println(msg) }
 
 // ErrNoUpdate — обновляться не нужно (уже последняя версия или релизов нет).
 var ErrNoUpdate = errors.New("обновлений нет")
@@ -38,8 +48,6 @@ var ErrNoUpdate = errors.New("обновлений нет")
 // Check — проверить GitHub и обновиться. Возвращает новую версию, если файл программы подменён
 // (тогда нужно перезапуститься), или ошибку (в том числе ErrNoUpdate), если всё осталось как было.
 func Check(current string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
 	var src selfupdate.Source
 	var err error
 	if url := os.Getenv(SourceEnv); url != "" {
@@ -56,12 +64,12 @@ func Check(current string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return apply(ctx, src, selfupdate.ParseSlug(Repo), current, exe)
+	return apply(src, selfupdate.ParseSlug(Repo), current, exe)
 }
 
 // apply — вся логика обновления. Источник релизов и путь к файлу — параметры: в тестах подставляем
 // поддельный источник и временный файл вместо настоящей программы.
-func apply(ctx context.Context, src selfupdate.Source, repo selfupdate.Repository, current, exePath string) (string, error) {
+func apply(src selfupdate.Source, repo selfupdate.Repository, current, exePath string) (string, error) {
 	updater, err := selfupdate.NewUpdater(selfupdate.Config{
 		Source: src,
 		// Сверяем SHA-256 скачанного архива со строчкой в checksums.txt того же релиза.
@@ -71,14 +79,22 @@ func apply(ctx context.Context, src selfupdate.Source, repo selfupdate.Repositor
 	if err != nil {
 		return "", err
 	}
-	latest, found, err := updater.DetectLatest(ctx, repo)
+	// context.WithTimeout — «отмени, если не уложились»: по истечении срока запрос обрывается сам.
+	checkCtx, cancel := context.WithTimeout(context.Background(), CheckTimeout)
+	defer cancel()
+	latest, found, err := updater.DetectLatest(checkCtx, repo)
 	if err != nil {
 		return "", fmt.Errorf("не узнать последний релиз: %w", err)
 	}
 	if !found || latest.LessOrEqual(current) {
 		return "", ErrNoUpdate
 	}
-	if err := updater.UpdateTo(ctx, latest, exePath); err != nil {
+	if Notify != nil {
+		Notify(fmt.Sprintf("Есть новая версия %s — скачиваю (%.1f МБ)…", latest.Version(), float64(latest.AssetByteSize)/1024/1024))
+	}
+	dlCtx, cancelDl := context.WithTimeout(context.Background(), DownloadTimeout)
+	defer cancelDl()
+	if err := updater.UpdateTo(dlCtx, latest, exePath); err != nil {
 		return "", fmt.Errorf("не обновиться до %s: %w", latest.Version(), err)
 	}
 	return latest.Version(), nil

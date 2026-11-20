@@ -107,7 +107,7 @@ var repo = selfupdate.ParseSlug("someone/office-health")
 
 func TestUpdates(t *testing.T) {
 	exe := installed(t)
-	got, err := apply(context.Background(), release(t, "1.1.0", []byte("новая версия"), false), repo, "1.0.0", exe)
+	got, err := apply(release(t, "1.1.0", []byte("новая версия"), false), repo, "1.0.0", exe)
 	if err != nil || got != "1.1.0" {
 		t.Fatalf("обновление: %q %v", got, err)
 	}
@@ -118,7 +118,7 @@ func TestUpdates(t *testing.T) {
 
 func TestBadChecksumKeepsOldVersion(t *testing.T) {
 	exe := installed(t)
-	_, err := apply(context.Background(), release(t, "1.1.0", []byte("подменённая версия"), true), repo, "1.0.0", exe)
+	_, err := apply(release(t, "1.1.0", []byte("подменённая версия"), true), repo, "1.0.0", exe)
 	if err == nil {
 		t.Fatal("архив с неверной суммой принят")
 	}
@@ -130,7 +130,7 @@ func TestBadChecksumKeepsOldVersion(t *testing.T) {
 func TestAlreadyLatest(t *testing.T) {
 	exe := installed(t)
 	for _, current := range []string{"1.1.0", "1.2.0"} {
-		if _, err := apply(context.Background(), release(t, "1.1.0", []byte("x"), false), repo, current, exe); !errors.Is(err, ErrNoUpdate) {
+		if _, err := apply(release(t, "1.1.0", []byte("x"), false), repo, current, exe); !errors.Is(err, ErrNoUpdate) {
 			t.Errorf("версия %s: ждали «обновлений нет», получили %v", current, err)
 		}
 	}
