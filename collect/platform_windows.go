@@ -9,7 +9,7 @@ import "golang.org/x/sys/windows"
 
 // platformCollectors — сборщики для Windows.
 func platformCollectors() []Collector {
-	return []Collector{diskCollector{}, batteryCollector{}}
+	return []Collector{diskCollector{}, batteryCollector{}, whea{}}
 }
 
 // smartctlKnownPaths — куда обычно ставится smartmontools на Windows.
