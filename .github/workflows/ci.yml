@@ -1,0 +1,42 @@
+# Тесты на каждый пуш — на Windows, macOS (Apple Silicon) и Linux.
+# Mac-код проверяется здесь на настоящем Mac: сборка, тесты и демо-отчёт.
+name: ci
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test ./...
+
+      - name: demo report
+        run: go run . report --demo --quiet --no-update --out demo-report
+
+      - name: real check (без прав администратора — что получится)
+        run: go run . report --quiet --no-update --out real-report
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.os }}
+          path: |
+            demo-report
+            real-report

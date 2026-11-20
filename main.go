@@ -25,15 +25,32 @@ import (
 	"office-health/report"
 	"office-health/rules"
 	"office-health/store"
+	"office-health/update"
+	"office-health/version"
 )
 
 func main() {
-	args := os.Args[1:]
+	// --no-update можно написать где угодно в строке запуска: вынимаем его до разбора остального
+	args, noUpdate := takeFlag(os.Args[1:], "--no-update", "-no-update")
+	if len(args) > 0 {
+		switch args[0] {
+		case "--version", "-version", "version":
+			fmt.Printf("office-health %s (%s/%s)\n", version.Version, runtime.GOOS, runtime.GOARCH)
+			return
+		case "--help", "-help", "-h", "help":
+			fmt.Println(usage)
+			return
+		}
+	}
 	cmd := "app"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		cmd, args = args[0], args[1:]
 	} else if len(args) > 0 {
 		cmd = "report" // старый способ запуска с флагами (--quiet в Планировщике) — продолжает работать
+	}
+
+	if !noUpdate && (cmd == "app" || cmd == "agent" || cmd == "report") && !contains(args, "--demo") {
+		selfUpdate()
 	}
 
 	var code int
@@ -64,7 +81,50 @@ const usage = `Использование:
   office-health join <код>      подключить этот компьютер к владельцу по приглашению
   office-health agent           проверить и отправить владельцу
   office-health leave           отключить этот компьютер от владельца
-  office-health report [--demo] [--out папка] [--quiet]   отчёт в HTML-файл`
+  office-health report [--demo] [--out папка] [--quiet]   отчёт в HTML-файл
+  office-health --version       показать версию
+
+  --no-update                   не проверять обновления при запуске`
+
+// selfUpdate — при запуске проверить, нет ли новой версии на GitHub, и если есть — обновиться
+// и перезапуститься. Любая неудача (нет интернета и т.п.) — молча работаем дальше.
+// Ручные сборки (версия "dev") не обновляются, иначе при разработке программа заменяла бы себя релизом.
+func selfUpdate() {
+	if !version.IsRelease() || update.JustRestarted() {
+		return
+	}
+	newVersion, err := update.Check(version.Version)
+	if err != nil {
+		return // ErrNoUpdate, нет сети, GitHub недоступен — всё это не повод мешать работе
+	}
+	fmt.Printf("Обновлено: %s → %s. Перезапускаю…\n", version.Version, newVersion)
+	if err := update.Restart(); err != nil {
+		fmt.Println("Не удалось перезапуститься, новая версия заработает со следующего запуска:", err)
+	}
+}
+
+// takeFlag убирает флаг из списка и говорит, был ли он.
+func takeFlag(args []string, names ...string) ([]string, bool) {
+	var out []string
+	found := false
+	for _, a := range args {
+		if contains(names, a) {
+			found = true
+			continue
+		}
+		out = append(out, a)
+	}
+	return out, found
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
 
 // done печатает результат команды и возвращает код завершения.
 func done(err error, ok string) int {

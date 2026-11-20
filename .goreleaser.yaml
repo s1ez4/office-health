@@ -1,0 +1,57 @@
+# GoReleaser собирает релиз: программы под все системы → архивы → checksums.txt → GitHub Releases.
+# Запускается из GitHub Actions (.github/workflows/release.yml), когда в репозиторий пушат тег vX.Y.Z.
+# Проверить у себя без публикации: goreleaser release --snapshot --clean   (результат — в dist/)
+version: 2
+
+project_name: office-health
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: office-health
+    main: .
+    binary: office-health
+    env:
+      - CGO_ENABLED=0 # чистый Go: собирается под любую систему на любой
+    flags:
+      - -trimpath
+    ldflags:
+      # -X подставляет номер версии из тега (v1.2.3 → 1.2.3) в переменную version.Version
+      - -s -w -X office-health/version.Version={{ .Version }}
+    goos: [windows, darwin]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: office-health
+    # Имя вида office-health_1.2.3_darwin_arm64.tar.gz — по ОС и процессору в имени
+    # автообновление находит свой архив.
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  # Список SHA-256 всех архивов. Автообновление сверяет по нему скачанный файл.
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  draft: false
+  prerelease: auto # теги вида v1.0.0-beta.1 станут «пре-релизами» — автообновление их не берёт
