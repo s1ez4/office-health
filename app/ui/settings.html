@@ -1,0 +1,32 @@
+{{define "title"}}{{.Card.M.Name}} · настройки{{end}}
+
+{{define "content"}}
+<section style="display:flex;flex-direction:column;gap:28px">
+<div><a class="mono pill pill-ok" href="/m/{{.Card.M.ID}}" style="text-decoration:none">← назад к отчёту</a></div>
+<h1><span class="prog">настройки:</span><span class="host">{{.Card.M.Name}}</span></h1>
+</section>
+
+<section class="row">
+<div class="mono">*01 — название</div>
+<article class="glass card">
+  <form class="formrow" method="post" action="/m/{{.Card.M.ID}}/rename">
+    <input type="text" id="name" name="name" value="{{.Card.M.Name}}" maxlength="80" aria-label="Название компьютера">
+    <button class="mono pill pill-soon" type="submit">сохранить</button>
+  </form>
+  <div class="sub">Так компьютер называется в этой панели. На самом компьютере ничего не меняется.</div>
+</article>
+</section>
+
+{{if not .Card.M.Self}}
+<section class="row">
+<div class="mono">*02 — убрать</div>
+<article class="glass card is-urgent">
+  <div class="sub" style="font-size:17px">Удалится история проверок, а ключ этого компьютера перестанет действовать — новые данные от него приниматься не будут.</div>
+  <form class="formrow" method="post" action="/m/{{.Card.M.ID}}/remove">
+    <label class="formrow" style="font-size:16px"><input type="checkbox" id="confirm" required> Да, убрать «{{.Card.M.Name}}»</label>
+    <button class="mono pill pill-danger" type="submit">убрать компьютер</button>
+  </form>
+</article>
+</section>
+{{end}}
+{{end}}

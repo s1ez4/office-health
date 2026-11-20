@@ -28,6 +28,7 @@ func (a *App) uiRoutes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", a.dashboard) // {$} — ровно «/», а не «всё, что начинается с /»
 	mux.HandleFunc("GET /m/{id}", a.machine)
+	mux.HandleFunc("GET /m/{id}/settings", a.settings)
 	mux.HandleFunc("POST /check", a.check)
 	mux.HandleFunc("GET /add", a.addPage)
 	mux.HandleFunc("POST /add", a.createInvite)
@@ -56,7 +57,9 @@ type card struct {
 	Has      bool // была ли хоть одна проверка
 	S        collect.Snapshot
 	R        rules.Result
-	Findings []rules.Finding // самое важное, худшее сверху
+	Findings []rules.Finding // самое важное (до 3), худшее сверху
+	Count    int             // сколько всего замечаний
+	Battery  string          // «79%» или пусто, если батареи нет
 	Silent   time.Duration   // сколько агент молчит (0 — всё в порядке)
 }
 
@@ -66,7 +69,12 @@ func (a *App) card(m store.Machine) card {
 	c := card{M: m}
 	if snap, ok := a.store.Latest(m.ID); ok {
 		c.Has, c.S, c.R = true, snap, rules.Evaluate(snap)
-		c.Findings = topFindings(c.R, 3)
+		all := topFindings(c.R, 1000)
+		c.Count = len(all)
+		c.Findings = all[:min(3, len(all))]
+		if b := snap.Battery; b != nil && b.Present {
+			c.Battery = fmt.Sprintf("%.0f%%", b.HealthPct)
+		}
 	}
 	if !m.Self && !m.LastSeen.IsZero() && time.Since(m.LastSeen) > silentAfter {
 		c.Silent = time.Since(m.LastSeen)
@@ -97,20 +105,38 @@ func topFindings(r rules.Result, n int) []rules.Finding {
 }
 
 type dashboardData struct {
-	Cards    []card
-	Checking bool
-	Counts   map[rules.Level]int
-	Demo     bool
+	Cards        []card
+	Checking     bool
+	Counts       map[rules.Level]int
+	Demo         bool
+	OverallClass string // цвет большой плашки: худший статус среди всех компьютеров
+	Headline     string // «1 срочно · 1 скоро · 2 в норме»
 }
 
 func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
 	d := dashboardData{Checking: a.checking.Load(), Counts: map[rules.Level]int{}, Demo: a.opt.Demo}
+	worst := rules.Unknown
 	for _, m := range a.store.Machines() {
 		c := a.card(m)
 		d.Cards = append(d.Cards, c)
 		if c.Has {
 			d.Counts[c.R.Overall]++
+			worst = max(worst, c.R.Overall)
 		}
+	}
+	d.OverallClass = report.LevelClass(worst)
+	var parts []string
+	for _, p := range []struct {
+		l    rules.Level
+		text string
+	}{{rules.Urgent, "срочно"}, {rules.Soon, "скоро менять"}, {rules.OK, "в норме"}} {
+		if n := d.Counts[p.l]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", n, p.text))
+		}
+	}
+	d.Headline = strings.Join(parts, " · ")
+	if d.Headline == "" {
+		d.Headline = "ждём первые проверки"
 	}
 	// «Этот» компьютер — первым, дальше худшие сверху
 	sort.SliceStable(d.Cards, func(i, j int) bool {
@@ -122,69 +148,95 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
 	a.render(w, "dashboard", d)
 }
 
-// historyRow — строка истории: главные цифры одной проверки.
-type historyRow struct {
-	Time    time.Time
-	Level   rules.Level
-	Sectors int64  // плохих секторов на всех дисках
-	Wear    string // износ SSD, худший
-	Battery string
-	Errors  string
-	Delta   int64 // насколько выросло число плохих секторов с предыдущей проверки
-}
-
-type machineData struct {
-	Card     card
-	Page     report.Page
-	History  []historyRow
-	Checking bool
-	Demo     bool
-}
-
+// machine — страница компьютера. Рисуется тем же шаблоном, что и отчёт-файл (новый дизайн),
+// плюс кнопки приложения и история проверок.
 func (a *App) machine(w http.ResponseWriter, r *http.Request) {
 	m, ok := a.store.Machine(r.PathValue("id"))
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
-	d := machineData{Card: a.card(m), Checking: a.checking.Load(), Demo: a.opt.Demo}
-	if d.Card.Has {
-		d.Page = report.NewPage(d.Card.S, d.Card.R)
+	c := a.card(m)
+	checking := m.Self && a.checking.Load()
+	if !c.Has {
+		if m.Self && !a.opt.Demo && !checking {
+			go a.checkSelf() // ещё ни разу не проверяли — начинаем сами
+			checking = true
+		}
+		msg := "Компьютер подключён, ждём от него первую проверку."
+		if m.Self {
+			msg = "Проверяю этот компьютер — страница обновится сама через несколько секунд."
+		}
+		a.render(w, "message", messageData{Text: msg, Refresh: m.Self})
+		return
+	}
+	v := report.BuildView(c.S, c.R)
+	v.Hostname = c.M.Name // в панели — то имя, которое дал владелец
+	v.HostFitVW = report.HostFit(v.Hostname)
+	v.App = &report.AppNav{
+		BackURL: "/", SelfURL: "/m/" + m.ID, SettingsURL: "/m/" + m.ID + "/settings",
+		CanCheck: m.Self && !a.opt.Demo, Checking: checking,
+	}
+	if c.Silent > 0 {
+		v.App.Note = fmt.Sprintf("не выходил на связь %d дн. — ниже последняя полученная проверка", int(c.Silent.Hours()/24))
+	} else if !m.Self {
+		v.App.Note = "данные приходили " + agoText(m.LastSeen)
 	}
 	snaps := a.store.History(m.ID, 15)
 	for i, s := range snaps {
-		row := summarize(s)
-		if i+1 < len(snaps) { // сравниваем с проверкой перед этой (история идёт от новых к старым)
-			row.Delta = row.Sectors - summarize(snaps[i+1]).Sectors
+		res := rules.Evaluate(s)
+		row := report.HistoryRow{Time: agoText(s.CollectedAt), Level: report.LevelClass(res.Overall), Label: report.LevelLabel(res.Overall)}
+		sectors := badSectors(s)
+		if sectors >= 0 {
+			row.Sectors = report.Thousands(sectors)
 		}
-		d.History = append(d.History, row)
+		if i+1 < len(snaps) { // сравниваем с проверкой перед этой (история идёт от новых к старым)
+			if delta := sectors - badSectors(snaps[i+1]); delta > 0 && sectors >= 0 {
+				row.Delta = "+" + report.Thousands(delta)
+			}
+		}
+		if s.Battery != nil && s.Battery.Present {
+			row.Battery = fmt.Sprintf("%.0f%%", s.Battery.HealthPct)
+		}
+		v.App.History = append(v.App.History, row)
 	}
-	a.render(w, "machine", d)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	report.Render(w, v)
 }
 
-func summarize(s collect.Snapshot) historyRow {
-	row := historyRow{Time: s.CollectedAt, Level: rules.Evaluate(s).Overall, Wear: "—", Battery: "—", Errors: "—"}
-	var wear int64 = -1
+// badSectors — сумма плохих секторов (5 + 197 + 198) на всех дисках; -1 — диски этого не сообщают (SSD/NVMe).
+func badSectors(s collect.Snapshot) int64 {
+	total, known := int64(0), false
 	for _, d := range s.Disks.List {
 		for _, p := range []*int64{d.Reallocated, d.Pending, d.Uncorrectable} {
 			if p != nil {
-				row.Sectors += *p
+				total += *p
+				known = true
 			}
 		}
-		if d.PercentUsed != nil && *d.PercentUsed > wear {
-			wear = *d.PercentUsed
-		}
 	}
-	if wear >= 0 {
-		row.Wear = fmt.Sprintf("%d%%", wear)
+	if !known {
+		return -1
 	}
-	if s.Battery != nil && s.Battery.Present {
-		row.Battery = fmt.Sprintf("%.0f%%", s.Battery.HealthPct)
+	return total
+}
+
+type messageData struct {
+	Text    string
+	Refresh bool
+}
+
+type settingsData struct {
+	Card card
+}
+
+func (a *App) settings(w http.ResponseWriter, r *http.Request) {
+	m, ok := a.store.Machine(r.PathValue("id"))
+	if !ok {
+		http.NotFound(w, r)
+		return
 	}
-	if s.HWErrors != nil {
-		row.Errors = fmt.Sprint(s.HWErrors.Count)
-	}
-	return row
+	a.render(w, "settings", settingsData{Card: a.card(m)})
 }
 
 func (a *App) check(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +325,7 @@ func (a *App) joinOther(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) quitApp(w http.ResponseWriter, r *http.Request) {
-	a.render(w, "message", "Office Health выключен. Окно браузера можно закрыть.")
+	a.render(w, "message", messageData{Text: "Office Health выключен. Окно браузера можно закрыть."})
 	go func() { // выключаемся чуть позже — чтобы браузер успел получить страницу
 		time.Sleep(500 * time.Millisecond)
 		close(a.quit)
@@ -326,25 +378,11 @@ func (a *App) agentReport(w http.ResponseWriter, r *http.Request) {
 // --- функции для шаблонов страниц ---
 
 var uiFuncs = template.FuncMap{
-	"ago": func(t time.Time) string {
-		if t.IsZero() {
-			return "ещё не было"
-		}
-		d := time.Since(t)
-		now := time.Now()
-		switch {
-		case d < time.Minute:
-			return "только что"
-		case d < time.Hour:
-			return fmt.Sprintf("%d мин назад", int(d.Minutes()))
-		case t.YearDay() == now.YearDay() && t.Year() == now.Year():
-			return "сегодня в " + t.Format("15:04")
-		case d < 48*time.Hour && t.YearDay() == now.Add(-24*time.Hour).YearDay():
-			return "вчера в " + t.Format("15:04")
-		}
-		return t.Format("02.01.2006 15:04")
-	},
-	"days": func(d time.Duration) int { return int(d.Hours() / 24) },
+	"ago":      agoText,
+	"lvlClass": report.LevelClass,
+	"lvlLabel": report.LevelLabel,
+	"two":      func(n int) string { return fmt.Sprintf("%02d", n) },
+	"days":     func(d time.Duration) int { return int(d.Hours() / 24) },
 	"platform": func(p string) string {
 		switch p {
 		case "windows":
@@ -364,4 +402,24 @@ var uiFuncs = template.FuncMap{
 		return ""
 	},
 	"lvl": func(l int) rules.Level { return rules.Level(l) },
+}
+
+// agoText — «только что», «15 мин назад», «сегодня в 14:05», «вчера в 09:30» или дата.
+func agoText(t time.Time) string {
+	if t.IsZero() {
+		return "ещё не было"
+	}
+	d := time.Since(t)
+	now := time.Now()
+	switch {
+	case d < time.Minute:
+		return "только что"
+	case d < time.Hour:
+		return fmt.Sprintf("%d мин назад", int(d.Minutes()))
+	case t.YearDay() == now.YearDay() && t.Year() == now.Year():
+		return "сегодня в " + t.Format("15:04")
+	case d < 48*time.Hour && t.YearDay() == now.Add(-24*time.Hour).YearDay():
+		return "вчера в " + t.Format("15:04")
+	}
+	return t.Format("02.01.2006 15:04")
 }

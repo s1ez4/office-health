@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>office-health: {{.Hostname}}</title>
+{{with .App}}{{if .Checking}}<meta http-equiv="refresh" content="3">{{end}}{{end}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -110,7 +111,14 @@ footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap
 <div class="wrap">
 
 <section style="display:flex;flex-direction:column;gap:28px">
-<h1><span class="prog">office—health:</span><span class="host">{{.Hostname}}</span></h1>
+{{with .App}}<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+<a class="mono pill pill-ok" href="{{.BackURL}}" style="color:inherit;text-decoration:none">← все компьютеры</a>
+{{if .Checking}}<span class="mono pill pill-soon">проверяю…</span>
+{{else if .CanCheck}}<form method="post" action="/check" style="margin:0"><input type="hidden" name="back" value="{{.SelfURL}}"><button type="submit" class="mono pill pill-soon" style="border:0;cursor:pointer;font:inherit">проверить сейчас</button></form>{{end}}
+<a class="mono pill pill-ok" href="{{.SettingsURL}}" style="color:inherit;text-decoration:none">настройки</a>
+{{with .Note}}<span class="mono sub">{{.}}</span>{{end}}
+</div>{{end}}
+<h1><span class="prog">office—health:</span><span class="host" style="overflow-wrap:anywhere{{with .HostFitVW}};font-size:min(236px,17vw,{{.}}vw){{end}}">{{.Hostname}}</span></h1>
 <div><span class="status status-{{.Overall.Level}}">
 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>
 ( {{.Overall.Headline}} )</span></div>
@@ -205,6 +213,19 @@ footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap
 </article>
 </div>
 </section>
+
+{{with .App}}{{if .History}}
+<section class="row">
+<div class="mono">*04 — история проверок</div>
+<article class="glass card">
+<div class="kv">
+{{range .History}}<div><span>{{.Time}}</span><b class="t-{{.Level}}">{{.Label}}{{if .Sectors}} · сектора {{.Sectors}}{{end}}{{with .Delta}} <span class="t-urgent">{{.}}</span>{{end}}{{if .Battery}} · батарея {{.Battery}}{{end}}</b></div>
+{{end}}
+</div>
+<div class="mono sub">красное «+n» — плохих секторов стало больше с прошлой проверки</div>
+</article>
+</section>
+{{end}}{{end}}
 
 <footer class="mono">
 <span>*данные: {{.Sources}}</span>

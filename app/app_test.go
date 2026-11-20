@@ -49,7 +49,7 @@ func TestPagesRender(t *testing.T) {
 
 	rec := do(ui, "GET", "/", local, nil, nil)
 	body := rec.Body.String()
-	for _, want := range []string{"DIRECTOR-LAPTOP", "Бухгалтерия", "Ресепшен", "Склад", "Срочно: 1", "Не выходил на связь 4 дн."} {
+	for _, want := range []string{"DIRECTOR-LAPTOP", "Бухгалтерия", "Ресепшен", "Склад", "1 срочно", "4 дн. не присылал данные", "Заменить HDD"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("на главной нет %q", want)
 		}
@@ -59,7 +59,7 @@ func TestPagesRender(t *testing.T) {
 		if rec.Code != 200 || strings.Contains(rec.Body.String(), "<no value>") {
 			t.Errorf("страница %s: код %d", m.Name, rec.Code)
 		}
-		if m.Name == "Бухгалтерия" && !strings.Contains(rec.Body.String(), `<span class="grow" title="больше, чем в прошлую проверку">&#43;54</span>`) {
+		if m.Name == "Бухгалтерия" && !strings.Contains(rec.Body.String(), `<span class="t-urgent">&#43;54</span>`) {
 			t.Error("в истории бухгалтерии не видно роста секторов +54")
 		}
 	}

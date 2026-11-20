@@ -30,6 +30,41 @@ type ReportView struct {
 		Items               []ErrItem
 	}
 	Sources string // откуда данные (подвал): «smartctl / wmi / журнал windows»
+
+	App *AppNav // только в приложении: кнопки и история; в отчёте-файле nil — этих блоков нет
+
+	// HostFitVW — для длинного имени без дефисов («Бухгалтерия»): размер шрифта в vw, при котором
+	// имя помещается в одну строку. 0 — имя короткое, размер как в дизайне.
+	HostFitVW float64
+}
+
+// hostFit: буква этого шрифта в среднем шириной ~0,62 от его размера, а места под заголовок ~88% окна.
+// Значит, имя из n букв влезает при размере 88/(0,62·n) ≈ 142/n vw. Короче 10 букв — дизайн и так справляется.
+func hostFit(name string) float64 {
+	n := 0
+	for _, part := range strings.FieldsFunc(name, func(r rune) bool { return r == '-' || r == ' ' || r == '_' }) {
+		n = max(n, len([]rune(part))) // переносится по дефису и пробелу — важна самая длинная часть
+	}
+	if n < 10 {
+		return 0
+	}
+	return math.Floor(142/float64(n)*10) / 10
+}
+
+// AppNav — то, что добавляет к отчёту приложение: навигация, «проверить сейчас», история проверок.
+type AppNav struct {
+	BackURL, SelfURL, SettingsURL string
+	CanCheck                      bool // это «свой» компьютер — его можно проверить кнопкой
+	Checking                      bool // проверка идёт прямо сейчас — страница обновляется сама
+	Note                          string
+	History                       []HistoryRow
+}
+
+// HistoryRow — одна прошлая проверка, уже готовыми строками.
+type HistoryRow struct {
+	Time, Level, Label string
+	Sectors, Delta     string // Delta — «+54», если плохих секторов стало больше
+	Battery            string
 }
 
 // Action — одно дело «что сделать». Label: «▲ срочно» / «◆ скоро» / «● норма»; Short — 2–4 слова для окна сводки.
@@ -99,6 +134,12 @@ func thousands(n int64) string {
 	return b.String()
 }
 
+// Экспортированные помощники — чтобы приложение подписывало статусы и числа так же, как отчёт.
+func LevelClass(l rules.Level) string { return level(l) }
+func LevelLabel(l rules.Level) string { return label(l) }
+func Thousands(n int64) string        { return thousands(n) }
+func HostFit(name string) float64     { return hostFit(name) }
+
 func num(p *int64) string {
 	if p == nil {
 		return "—"
@@ -112,6 +153,7 @@ func two(n int) string { return fmt.Sprintf("%02d", n) } // 1 → «01»
 func BuildView(s collect.Snapshot, r rules.Result) ReportView {
 	v := ReportView{
 		Hostname:     s.System.Hostname,
+		HostFitVW:    hostFit(s.System.Hostname),
 		ScanTime:     s.CollectedAt.Format("02.01.2006 15:04"),
 		AgentVersion: version.Version,
 		Specs:        specs(s),

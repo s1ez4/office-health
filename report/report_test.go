@@ -123,3 +123,18 @@ func TestThousands(t *testing.T) {
 		}
 	}
 }
+
+func TestHostFit(t *testing.T) {
+	cases := map[string]float64{
+		"BUH-PC-03":          0,    // короткие части — как в дизайне
+		"LAPTOP-JQHH03CC":    0,    // «JQHH03CC» — 8 знаков, переносится по дефису
+		"Бухгалтерия":        12.9, // 11 букв одним словом — уменьшаем
+		"Office-MacBook-Pro": 0,
+		"DESKTOP7FG2KQ1AB":   8.8,
+	}
+	for name, want := range cases {
+		if got := hostFit(name); got != want {
+			t.Errorf("hostFit(%q) = %v, ждали %v", name, got, want)
+		}
+	}
+}

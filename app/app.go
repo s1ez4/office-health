@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"office-health/collect"
-	"office-health/report"
 	"office-health/store"
 )
 
@@ -239,11 +238,12 @@ func (a *App) guard(next http.Handler) http.Handler {
 	})
 }
 
-// parsePages собирает шаблоны: к шаблону отчёта добавляем общий макет и по одной странице.
+// parsePages собирает шаблоны: общий макет layout.html + по одной странице. Страницу компьютера
+// рисует не он, а шаблон отчёта (report.Render) — у них один дизайн.
 func parsePages() map[string]*template.Template {
-	base := template.Must(report.NewTemplate().Funcs(uiFuncs).ParseFS(uiFiles, "ui/layout.html"))
+	base := template.Must(template.New("layout").Funcs(uiFuncs).ParseFS(uiFiles, "ui/layout.html"))
 	pages := map[string]*template.Template{}
-	for _, name := range []string{"dashboard", "machine", "add", "message"} {
+	for _, name := range []string{"dashboard", "add", "message", "settings"} {
 		pages[name] = template.Must(template.Must(base.Clone()).ParseFS(uiFiles, "ui/"+name+".html"))
 	}
 	return pages

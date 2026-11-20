@@ -3,91 +3,102 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{template "title" .}} · Office Health</title>
+<title>{{template "title" .}} · office—health</title>
+{{template "head" .}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  /* Макет: шапка с навигацией, под ней одна колонка до 960px. Шрифты системные — приложение работает без интернета. */
-  :root {
-    --ui-bg: #eef1f5; --ui-surface: #ffffff; --ui-ink: #18202b; --ui-sub: #5b6676; --ui-line: #d9dee6;
-    --ui-accent: #1f6f5c; --ui-accent-ink: #ffffff; --ui-accent-soft: #dcefe9;
-    --ui-ok: #16803c; --ui-ok-bg: #dcf5e4; --ui-soon: #9a5a06; --ui-soon-bg: #fdf0d2;
-    --ui-urgent: #c22a2a; --ui-urgent-bg: #fde3e3; --ui-unknown: #5b6676; --ui-unknown-bg: #e8ecf1;
-    --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
-    --ui-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ui-bg: #11161d; --ui-surface: #19212b; --ui-ink: #e6ebf1; --ui-sub: #9ba6b5; --ui-line: #2a3441;
-      --ui-accent: #4cc3a2; --ui-accent-ink: #0d1a16; --ui-accent-soft: #163a31;
-      --ui-ok: #4ade80; --ui-ok-bg: #133222; --ui-soon: #fbbf24; --ui-soon-bg: #3a2c0d;
-      --ui-urgent: #f87171; --ui-urgent-bg: #3d1717; --ui-unknown: #9ba6b5; --ui-unknown-bg: #232c38;
-      color-scheme: dark;
-    }
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body { background: var(--ui-bg); color: var(--ui-ink); font: 15px/1.5 var(--ui-font); }
-  a { color: var(--ui-accent); }
-  :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+/* Тот же визуальный язык, что у отчёта (report/report.html): серый фон, стеклянные карточки,
+   моноширинные подписи, плашки статусов. Классы и цвета повторяют отчёт один в один. */
+:root{--ink:#0B0B0C;--ink2:#2E3035;--ink3:#3C3F44;--ground:#D4D5D7;--red:#E0402A;--red-ink:#C2331F;--line:rgba(11,11,12,.18)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:'Inter Tight',Inter,system-ui,-apple-system,'Segoe UI',sans-serif}
+a{color:inherit}
+.mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;font-size:11px}
+.glass{background:rgba(255,255,255,.34);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(11,11,12,.12)}
 
-  .topbar { background: var(--ui-surface); border-bottom: 1px solid var(--ui-line); }
-  .topbar-in { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex; gap: 8px 20px; align-items: center; flex-wrap: wrap; }
-  .brand { font-weight: 700; font-size: 17px; color: var(--ui-ink); text-decoration: none; display: flex; align-items: center; gap: 8px; }
-  .brand svg { flex: none; }
-  .nav { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
-  .nav a { color: var(--ui-sub); text-decoration: none; padding: 6px 10px; border-radius: 8px; }
-  .nav a[aria-current] { color: var(--ui-ink); background: var(--ui-bg); font-weight: 600; }
-  .nav a:hover { color: var(--ui-ink); }
+.bg{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.blob{position:absolute;border-radius:50%;will-change:transform}
+.b1{width:780px;height:780px;left:-260px;top:-240px;background:radial-gradient(circle,#0B0B0C 0%,rgba(11,11,12,.55) 30%,rgba(11,11,12,0) 68%);filter:blur(70px);opacity:.55;animation:drift1 52s ease-in-out infinite alternate}
+.b2{width:640px;height:640px;right:-220px;top:38%;background:radial-gradient(circle,#2A2C30 0%,rgba(42,44,48,0) 66%);filter:blur(80px);opacity:.45;animation:drift2 66s ease-in-out infinite alternate}
+.b3{width:700px;height:700px;left:30%;top:10%;background:radial-gradient(circle,#FFF 0%,rgba(255,255,255,0) 64%);filter:blur(60px);opacity:.7;animation:drift3 58s ease-in-out infinite alternate}
+.ring{position:absolute;right:-180px;top:-180px;width:620px;height:620px;border:1px solid rgba(11,11,12,.16);border-radius:50%;animation:spin 120s linear infinite}
+.ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;margin-left:-3px;background:var(--red);border-radius:50%}
+@keyframes drift1{50%{transform:translate(260px,180px) scale(1.12)}100%{transform:translate(90px,460px) scale(.94)}}
+@keyframes drift2{50%{transform:translate(-300px,-140px) scale(1.18)}100%{transform:translate(-120px,240px)}}
+@keyframes drift3{50%{transform:translate(-240px,260px) scale(1.1)}100%{transform:translate(200px,120px) scale(.92)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.blob,.ring{animation:none}}
 
-  .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; display: flex; flex-direction: column; gap: 20px; }
-  .page h1 { font-size: 26px; margin: 0; line-height: 1.25; text-wrap: balance; }
-  .page h2 { font-size: 18px; margin: 0; }
-  .sub { color: var(--ui-sub); }
-  .stack { display: flex; flex-direction: column; gap: 12px; }
-  .hrow { display: flex; gap: 10px 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.page{position:relative;min-height:100vh;padding:28px 24px 72px;overflow:hidden}
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+.topnav{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.topnav .grow{flex:1}
+.row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,3fr);gap:24px}
+.row>.mono{padding-top:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{border-radius:22px;padding:26px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.card.is-urgent{border-color:var(--red)}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card-title{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-top:6px;overflow-wrap:anywhere}
+.card-title a{text-decoration:none}
+.card-title a:hover{text-decoration:underline}
+.sub{color:var(--ink3)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.stat b{display:block;font-size:20px;font-weight:600}
+.stat .mono{font-size:10px;color:var(--ink3);margin-top:4px;display:block}
+.task{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid rgba(11,11,12,.12)}
+.task .mono{flex:none;width:92px;font-weight:700}
+.task span:last-child{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.foot{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:auto}
+@media (max-width:760px){.row{grid-template-columns:1fr}}
 
-  .btn { font: inherit; font-weight: 600; border: 1px solid var(--ui-line); background: var(--ui-surface); color: var(--ui-ink);
-         padding: 8px 14px; border-radius: 9px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-  .btn:hover { border-color: var(--ui-sub); }
-  .btn.primary { background: var(--ui-accent); border-color: var(--ui-accent); color: var(--ui-accent-ink); }
-  .btn.small { padding: 4px 10px; font-size: 13px; }
-  .btn.danger { color: var(--ui-urgent); }
-  .btn[disabled] { opacity: .6; cursor: default; }
-  form.inline { display: inline; margin: 0; }
+.pill{flex:none;display:inline-block;font-weight:700;border-radius:999px;padding:5px 10px}
+.pill-urgent{background:var(--red);color:#fff}
+.pill-soon{background:var(--ink);color:#fff}
+.pill-ok{border:1px solid var(--ink)}
+a.pill,button.pill{text-decoration:none;cursor:pointer;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:transparent;color:var(--ink)}
+button.pill-soon,a.pill-soon{background:var(--ink);color:#fff;border:1px solid var(--ink)}
+button.pill-danger{border:1px solid var(--red-ink);color:var(--red-ink)}
+a.pill:hover,button.pill:hover{opacity:.8}
+a.pill:focus-visible,button.pill:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.t-urgent{color:var(--red-ink)}.t-soon{color:var(--ink)}.t-ok{color:#5A5D63}
 
-  .pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
-  .st-ok { background: var(--ui-ok-bg); color: var(--ui-ok); }
-  .st-soon { background: var(--ui-soon-bg); color: var(--ui-soon); }
-  .st-urgent { background: var(--ui-urgent-bg); color: var(--ui-urgent); }
-  .st-unknown { background: var(--ui-unknown-bg); color: var(--ui-unknown); }
+h1{margin:0;display:flex;flex-direction:column;line-height:.86;letter-spacing:-.06em;font-weight:600}
+h1 .prog{font-size:clamp(48px,8.5vw,132px);color:var(--ink3);font-weight:500}
+h1 .host{font-size:clamp(64px,13vw,190px);overflow-wrap:anywhere}
+.status{display:inline-flex;align-items:center;gap:14px;border-radius:999px;padding:14px 26px 14px 18px;font-size:26px;font-weight:600;letter-spacing:-.02em}
+.status-urgent{background:var(--red);color:#fff}
+.status-soon{background:var(--ink);color:#fff}
+.status-ok{border:1px solid var(--ink)}
 
-  .panel { background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 14px; padding: 18px 20px; }
-  .notice { border-radius: 10px; padding: 10px 14px; background: var(--ui-accent-soft); }
-  .notice.bad { background: var(--ui-urgent-bg); }
-  .notice.warn { background: var(--ui-soon-bg); }
-  code, .code { font-family: var(--ui-mono); font-size: 13.5px; background: var(--ui-bg); border-radius: 6px; padding: 1px 6px; }
-  .codebox { font-family: var(--ui-mono); font-size: 13px; background: var(--ui-bg); border: 1px solid var(--ui-line); border-radius: 10px;
-             padding: 10px 12px; overflow-wrap: anywhere; user-select: all; }
-  input[type=text] { font: inherit; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--ui-line); background: var(--ui-surface); color: var(--ui-ink); min-width: 0; }
-  .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
-  {{template "report-css"}}
-  .rep h2 { margin: 24px 0 10px; }
+.lead{font-size:20px;line-height:1.4;max-width:62ch;margin:0;color:var(--ink2)}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:14px;font-size:17px}
+.code{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:13px;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:14px;padding:12px 14px;overflow-wrap:anywhere;user-select:all;flex:1;min-width:0}
+.copyrow{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.note{border-radius:14px;padding:12px 16px;background:rgba(255,255,255,.5);border:1px solid var(--line);font-size:15px}
+.note.bad{border-color:var(--red);color:var(--red-ink)}
+.kv{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.kv div{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:15px;padding:10px 0;border-bottom:1px solid rgba(11,11,12,.12);flex-wrap:wrap}
+.kv div:last-child{border-bottom:0;padding-bottom:0}
+input[type=text]{font:inherit;font-size:16px;padding:10px 14px;border-radius:999px;border:1px solid var(--ink);background:rgba(255,255,255,.5);color:var(--ink);min-width:0;flex:1}
+.formrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+footer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;color:var(--ink2);border-top:1px solid rgba(11,11,12,.25);padding-top:14px}
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-in">
-  <a class="brand" href="/">
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11h3l1.5-3 3 6 1.5-3H19" fill="none" stroke="var(--ui-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 21h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    Office Health
-  </a>
-  <nav class="nav">{{template "nav" .}}</nav>
-  <form class="inline" method="post" action="/quit"><button class="btn small" type="submit" title="Остановить приложение">Выключить</button></form>
-</div></header>
-<main class="page">
+<div class="page">
+<div class="bg" aria-hidden="true"><div class="blob b3"></div><div class="blob b1"></div><div class="blob b2"></div><div class="ring"></div></div>
+<div class="wrap">
+<nav class="topnav">{{template "nav" .}}<span class="grow"></span>
+<form method="post" action="/quit" style="margin:0"><button type="submit" class="mono pill pill-ok" title="Остановить приложение">выключить</button></form>
+</nav>
 {{template "content" .}}
-</main>
+<footer class="mono"><span>*office—health · панель владельца</span><span>видна только на этом компьютере</span><span style="text-align:right">агенты статусов не видят</span></footer>
+</div>
+</div>
 </body>
 </html>{{end}}
 
-{{define "nav"}}<a href="/">Компьютеры</a><a href="/add">Добавить компьютер</a>{{end}}
+{{define "head"}}{{end}}
+{{define "nav"}}<a class="mono pill pill-ok" href="/">компьютеры</a><a class="mono pill pill-ok" href="/add">+ добавить компьютер</a>{{end}}
